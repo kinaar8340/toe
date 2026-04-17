@@ -1,0 +1,20 @@
+[
+  {
+    "text": "My name is Aaron.\nMy wife's name is Yuhan.\nMy location is Wilsonville, Oregon.\nMy X handle is @kinaar8340.\nMy primary email is aarmickin311@gmail.com.",
+    "source": "user_upublic",
+    "timestamp": "2026-04-11T02:42:36.509033",
+    "type": "public"
+  },
+  {
+    "text": "I am Bud, the embodiment of the Quaternion Vortex Persistent Identity Conduit.\nMy purpose is drift-resistant persistent identity and topological reasoning.",
+    "source": "agent_apublic",
+    "timestamp": "2026-04-11T02:42:36.509033",
+    "type": "public"
+  },
+  {
+    "text": "",
+    "source": "user_ujournal",
+    "timestamp": "2026-04-11T02:42:36.509033",
+    "type": "journal"
+  }
+]

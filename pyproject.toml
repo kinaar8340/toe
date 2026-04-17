@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "toe"
+version = "1.0.0"
+description = "Aaron’s Theory of Everything — Flux Flywheels, Gauged Hopf Lattice"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["*"]
