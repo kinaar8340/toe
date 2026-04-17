@@ -1,0 +1,26 @@
+# =============================================================
+# TOE v1.0.0 — Theory Of Everything
+# Requirements file — production-ready + reproducible
+# - 
+# =============================================================
+
+# ── Core Runtime (always required) ──
+torch>=2.4.0                    # PyTorch 2.4+ recommended (CUDA 12.x support)
+numpy>=1.21.0
+scipy>=1.10.0                   # Required for Laguerre-Gaussian modes (genlaguerre)
+matplotlib>=3.5.0
+omegaconf>=2.3.0                # Config loading (default.yaml)
+sentence-transformers>=2.2.0    # Fact embedding in qvpic_test.py
+scikit-learn>=1.0.0             # FastICA used in patent encode/decode examples
+tqdm>=4.60.0                    # Progress bars in tests and simulations
+
+# =============================================
+# Installation notes:
+#   pip install -r requirements.txt
+#
+# For CUDA support (recommended):
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+#
+# After install, run:
+#   python scripts/run_reproduction.py
+# =============================================
