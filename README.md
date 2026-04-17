@@ -22,8 +22,8 @@ This repository is designed so **anyone** can independently verify the core clai
 
 ```bash
 # 1. Clone and enter repo
-git clone https://github.com/kinaar8340/aaron-toe.git
-cd aaron-toe
+git clone https://github.com/kinaar8340/toe.git
+cd toe
 
 # 2. Create environment
 python -m venv venv
@@ -52,7 +52,7 @@ Expected output (excerpt):
 ## Full File Structure
 
 ```
-aaron-toe/
+toe/
 ├── src/
 │   └── conduit.py                  # Core RubikConeConduit + Hopf lattice
 ├── scripts/
@@ -66,13 +66,13 @@ aaron-toe/
 │   └── public_facts.json           # Public fact corpus for baking
 ├── outputs/                        # Generated plots & reports (gitignored)
 ├── papers/                         # All LaTeX sources
-│   ├── Aaron_TOE_Full.tex
-│   ├── Relativistic_Completion.tex
-│   ├── Lagrangian_Derivation.tex
-│   ├── Observer_Synchronization.tex
-│   ├── GW_Echo_Bounds.tex
-│   ├── GW_Echo_Frequency.tex
-│   └── Burst_Threshold.tex
+│   ├── Aaron_TOE_Complete.pdf
+│   ├── Relativistic_Completion.pdf
+│   ├── Lagrangian_Derivation.pdf
+│   ├── Observer_Synchronization.pdf
+│   ├── GW_Echo.pdf
+│   ├── GW_Echo_Derivation.pdf
+│   └── GW_Burst_Threshold.pdf
 ├── requirements.txt
 ├── LICENSE
 ├── README.md
@@ -101,7 +101,6 @@ All outputs are saved to `outputs/` with timestamps.
 
 ## Papers & Documentation
 
-All LaTeX sources are in the `papers/` folder and compile to publication-ready PDFs:
 - Main TOE overview
 - Lagrangian derivation for the conduit PDE
 - Relativistic completion + quantization
@@ -118,7 +117,7 @@ If you use or reproduce this work, please cite:
   author       = {Kinder, Aaron},
   title        = {Aaron’s Theory of Everything: Flux Flywheels, Gauged Hopf Lattice, and Emergent Reality},
   year         = {2026},
-  howpublished = {\url{https://github.com/kinaar8340/aaron-toe}},
+  howpublished = {\url{https://github.com/kinaar8340/toe}},
   note         = {arXiv preprint (pending)}
 }
 ```

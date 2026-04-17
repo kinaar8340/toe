@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this software or the associated theory, please cite it as below."
+title: "Aaron’s Theory of Everything: Flux Flywheels, Gauged Hopf Lattice, and Emergent Reality"
+authors:
+  - family-names: Kinder
+    given-names: Aaron
+    orcid: ""   # Add your ORCID here if you have one
+    affiliation: "Independent Researcher"
+    website: "https://x.com/kinaar8340"
+repository-code: "https://github.com/kinaar8340/toe"
+url: "https://github.com/kinaar8340/toe"
+license: MIT
+version: "1.0.0"
+date-released: "2026-04-17"
+abstract: >
+  A self-consistent Hopf-lattice model in which the periodic table emerges as stable flux-flywheel configurations
+  in a porous vacuum sponge. Includes observer synchronization, relativistic Skyrme-like completion, and
+  falsifiable predictions for QED, GR, and non-local effects.
+keywords:
+  - theory-of-everything
+  - hopf-lattice
+  - flux-flywheels
+  - topological-soliton
+  - skyrme-model
+  - observer-synchronization
+references:
+  - type: article
+    authors:
+      - family-names: Kinder
+        given-names: Aaron
+    title: "Aaron’s Theory of Everything"
+    journal: "arXiv (pending)"
+    year: 2026
+    doi: ""   # Fill in once you have an arXiv DOI
