@@ -29,17 +29,24 @@ print(f"   Total CPUs available: {ray.cluster_resources().get('CPU', 0)}")
 
 @ray.remote(num_cpus=12, num_gpus=0, max_retries=3, scheduling_strategy="SPREAD")
 def run_epoch_trial(trial_id: int, params: dict):
-    """Minimal, robust Ray trial — only uses parameters that actually exist."""
+    """Ray remote trial — robust import fix."""
+    # === FIX: Make 'src' importable inside every Ray worker ===
+    import sys
+    from pathlib import Path
+    project_root = str(Path(__file__).resolve().parent.parent)
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+    # ========================================================
+
     print(f"\n🔬 Trial {trial_id} started with params: {params}")
 
     from src.conduit import RubikConeConduit
+    import torch
 
     device = torch.device("cpu")
 
-    # Create conduit with minimal constructor (no unknown kwargs)
     conduit = RubikConeConduit()
 
-    # Force ring_cone build if needed
     if hasattr(conduit, 'build_ring_cone') and getattr(conduit, 'ring_cone', None) is None:
         conduit.build_ring_cone()
     elif hasattr(conduit, '_build_ring_cone'):
@@ -49,7 +56,6 @@ def run_epoch_trial(trial_id: int, params: dict):
     print(f"   ? Using device: {device}")
     print(f"   ? Loaded RubikConeConduit v10.8")
 
-    # Minimal stats for reproduction (you can expand later)
     stats = {
         "active_cubes": 8,
         "braiding_phase": 0.8145,
