@@ -4,10 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 
-**One-sentence summary:**  
 A self-consistent Hopf-lattice model in which the periodic table emerges as stable flux-flywheel configurations in a porous vacuum sponge, with observer synchronization explaining current null results while leaving distinctive non-local predictions testable.
 
----
+![Banner](3d_map.png)
 
 ## 🔥 Latest Reproduction Results (April 17, 2026)
 
@@ -72,6 +71,7 @@ toe/
 │   ├── run_reproduction.py          # ← one-command verification
 │   ├── epoch_bake_sweep.py
 │   ├── pde_relaxation.py
+│   ├── z_flywheel_map.py
 │   └── two_gyro_lattice_demo.py
 ├── outputs/reproduction/            # ← latest results appear here
 ├── papers/                          # All LaTeX sources
