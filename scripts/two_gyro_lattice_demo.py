@@ -1,10 +1,15 @@
 # scripts/two_gyro_lattice_demo.py
 
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import argparse
 from tqdm import tqdm
+
+# === ROBUST OUTPUT DIRECTORY (always relative to project root) ===
+OUTPUT_DIR = Path(__file__).resolve().parent.parent / "outputs" / "two_gyro_lattice"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ==================== QUATERNION HELPERS ====================
 def q_mult(q1, q2):
@@ -249,7 +254,8 @@ if __name__ == "__main__":
     print("🎥 Rendering final tweaked color scheme version...")
     ani = FuncAnimation(fig, update, frames=1200, interval=25, blit=False)
 
-    ani.save('two_gyro_full_split_demo_FINAL.mp4', writer='ffmpeg', fps=30, dpi=160,
+    plot_path = OUTPUT_DIR / f"two_gyro_full_split_demo_FINAL.mp4"
+    ani.save(plot_path, writer='ffmpeg', fps=30, dpi=160,
              extra_args=['-pix_fmt', 'yuv420p', '-crf', '17'])
 
     print("\n✅ Saved as 'two_gyro_full_split_demo_FINAL.mp4'")
