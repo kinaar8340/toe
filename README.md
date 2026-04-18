@@ -5,14 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 
-
----
-
 ![Banner](3d_map.png)
 
 A self-consistent Hopf-lattice model in which the periodic table emerges as stable flux-flywheel configurations in a porous vacuum sponge, with observer synchronization explaining current null results while leaving distinctive non-local predictions testable.
-
----
 
 ## Quick Start (One-Click Reproduction)
 1. Clone Repository:
@@ -46,8 +41,6 @@ python scripts/run_reproduction.py --use-ray --trials 2000 --dense
 ```bash
 python scripts/plot_sweep_results.py
 ```
-
----
 
 ## Full File Structure
 ```
@@ -92,8 +85,6 @@ toe/
 └── CONTRIBUTING.md
 ```
 
----
-
 ## Latest Reproduction Results (April 17, 2026)
 ```
    Conduit created successfully
@@ -116,16 +107,12 @@ Mean active_cubes : 12.01  (stability islands observed)
  Reproduction complete! The invariants lock as expected.
 ```
 
----
-
 ![Banner](outputs/plots/param_vs_stability_scatter.png)
 ![Banner](outputs/plots/braiding_phase_histogram.png)
 ![Banner](outputs/plots/stability_islands_heatmap.png)
 ![Banner](outputs/reproduction/stability_islands.png)
 ![Banner](outputs/pde_relaxation/twist_pde_relaxation.png)
 ![Banner](outputs/plots/top10_stability_table.png)
-
----
 
 ## Citation
 ```bibtex
@@ -138,12 +125,8 @@ Mean active_cubes : 12.01  (stability islands observed)
 }
 ```
 
----
-
 ## License
 MIT License — see [LICENSE](LICENSE).
-
----
 
 ## Contacts
 ```
