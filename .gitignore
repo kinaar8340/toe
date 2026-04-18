@@ -15,4 +15,6 @@ __pycache__/
 dist/
 build/
 *.egg-info/
-*.whl
+*.whloutputs/reproduction/reproduction_results_*.csv
+outputs/reproduction/stability_islands_*.png
+outputs/epoch_sweep_*.csv
