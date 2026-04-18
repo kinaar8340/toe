@@ -2,10 +2,10 @@
 
 **Flux Flywheels, Gauged Hopf Lattice, and Emergent Reality**
 
-![CI](https://github.com/kinaar8340/toe/actions/workflows/ci.yml/badge.svg)
-![Coverage](https://codecov.io/gh/kinaar8340/toe/branch/main/graph/badge.svg?token=your-token-if-private)
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![Ruff](https://img.shields.io/badge/linting-ruff-blue)
+![Tests](https://github.com/kinaar8340/toe/actions/workflows/ci.yml/badge.svg)
+![Coverage](https://codecov.io/gh/kinaar8340/toe/branch/main/graph/badge.svg)
+![mypy](https://img.shields.io/badge/mypy-passing-brightgreen)
+![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ![Banner](3d_map.png)

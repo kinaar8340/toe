@@ -42,3 +42,4 @@ __pycache__/
 venv/
 ENV/
 .env
+outputs/

@@ -1,1 +1,19 @@
-# configs/default.yaml
+# toe/configs/default.yaml
+
+model:
+  embed_dim: 384
+  twist_rate: 12.5
+  max_depth: 56.0
+  num_polarizations: 3
+  gauge_strength: 1.0
+
+training:
+  recon_weight: 4200.0
+  learning_rate: 1e-4
+  batch_size: 64
+  num_epochs: 5
+  max_steps: 1000
+
+data:
+  num_samples: 2048
+  seq_len: 128
