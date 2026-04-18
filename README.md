@@ -1,10 +1,12 @@
-## Aaron’s Theory of Everything
+# TOE — Theory of Everything (RubikConeConduit v10.8)
 
 **Flux Flywheels, Gauged Hopf Lattice, and Emergent Reality**
 
-[![Tests](https://github.com/kinaar8340/toe/actions/workflows/ci.yml/badge.svg)](https://github.com/kinaar8340/toe/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-75%25-brightgreen)](https://github.com/kinaar8340/toe/actions)
-[![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue)](https://github.com/kinaar8340/toe)
+![CI](https://github.com/kinaar8340/toe/actions/workflows/ci.yml/badge.svg)
+![Coverage](https://codecov.io/gh/kinaar8340/toe/branch/main/graph/badge.svg?token=your-token-if-private)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![Ruff](https://img.shields.io/badge/linting-ruff-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ![Banner](3d_map.png)
 

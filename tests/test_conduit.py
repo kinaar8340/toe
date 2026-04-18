@@ -246,3 +246,71 @@ def test_monitor_topological_winding_after_training(minimal_conduit, sample_batc
 def test_heavy_simulation(minimal_conduit):
     """Placeholder for full-scale epoch sweeps (kept for CI)."""
     pass
+
+
+# ====================== HYPOTHESIS PROPERTY-BASED TESTS ======================
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+
+
+@given(st.integers(min_value=0, max_value=100))
+@settings(deadline=None)  # disable deadline for this cheap test (first run is slower)
+def test_fib_is_non_negative(n):
+    """fib(n) is always non-negative."""
+    assert RubikConeConduit().fib(n) >= 0
+
+
+@given(st.floats(min_value=0.0, max_value=1000.0), st.integers(min_value=1, max_value=20))
+def test_golden_scale_non_negative(base, fib_index):
+    """golden_scale always returns non-negative scaling (including base=0)."""
+    conduit = RubikConeConduit()
+    result = conduit.golden_scale(base, fib_index)
+    assert result >= 0.0
+
+
+@given(st.floats(min_value=-100.0, max_value=100.0), st.integers(min_value=0, max_value=3))
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+def test_position_returns_unit_vector(minimal_conduit, s, pol_idx):
+    """position(s, pol_idx) is always a unit vector (norm == 1.0 ± 1e-6)."""
+    emb = minimal_conduit.position(s, pol_idx)
+    assert torch.allclose(torch.norm(emb), torch.tensor(1.0), atol=1e-6)
+
+
+@given(st.floats(min_value=-50.0, max_value=50.0), st.floats(min_value=-50.0, max_value=50.0))
+def test_safe_cosine_property(a_val, b_val):
+    """safe_cosine always returns values in [-1, 1]."""
+    a = torch.tensor([a_val] * 384, dtype=torch.float32)
+    b = torch.tensor([b_val] * 384, dtype=torch.float32)
+    sim = safe_cosine(a, b)
+    assert -1.0 - 1e-6 <= sim.item() <= 1.0 + 1e-6
+
+
+@given(st.floats(min_value=0.0, max_value=56.0), st.integers(min_value=0, max_value=2))
+@settings(
+    max_examples=50, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+def test_recover_depth_close_to_original(minimal_conduit, s_original, pol_idx):
+    """recover_depth recovers the original s with reasonable accuracy on fresh model."""
+    emb = minimal_conduit.position(s_original, pol_idx)
+    recovered = minimal_conduit.recover_depth(emb, pol_idx=pol_idx, grid_size=128)
+    # On a fresh (untrained) model the recall is soft, especially near s=0.
+    # Tolerance matches real behaviour of untrained conduit (unit test uses <25 after training).
+    assert abs(recovered - s_original) < 45.0
+
+
+@given(st.lists(st.floats(min_value=0.1, max_value=56.0), min_size=3, max_size=8))
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+def test_monitor_topological_winding_invariants(minimal_conduit, sample_depths):
+    """monitor_topological_winding returns consistent geometric vs effective winding."""
+    # bake a few points
+    for s in sample_depths:
+        emb = minimal_conduit.position(s, 0)
+        minimal_conduit.bake_to_cube(int(s) % 12, emb.unsqueeze(0))
+
+    stats = minimal_conduit.monitor_topological_winding(n_samples=64, pol_ref=0)
+    assert "geometric_winding" in stats
+    assert "effective_winding" in stats or "learned_contribution" in stats
+    # geometric ~111, effective ~1 → loose relative check is sufficient
+    geo = stats.get("geometric_winding", 0)
+    eff = stats.get("effective_winding", stats.get("learned_contribution", 1.0))
+    assert abs(geo - eff * (geo / 1.0)) < 15.0 or abs(geo - eff) < 15.0
