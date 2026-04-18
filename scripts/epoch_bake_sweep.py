@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 """
-scripts/epoch_bake_sweep.py — v2.1 Ultra-Focused Sweep
-Focused hyperparameter sweep around the proven best region.
-Minimal & robust for Ray cluster.
+scripts/epoch_bake_sweep.py — v2.2 with single-node / Ray toggle
 """
 
 import os
 import sys
-import ray
-import torch
 import pandas as pd
 import argparse
 import numpy as np
@@ -20,25 +16,10 @@ project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-ray.init(address="auto", ignore_reinit_error=True)
 
-print("🔥 Epoch-Synchronous Magic Island Sweep v2.1 — FOCUSED YAHTZEE REGION")
-print(f"   Connected nodes: {len(ray.nodes())}")
-print(f"   Total CPUs available: {ray.cluster_resources().get('CPU', 0)}")
-
-
-@ray.remote(num_cpus=12, num_gpus=0, max_retries=3, scheduling_strategy="SPREAD")
 def run_epoch_trial(trial_id: int, params: dict):
-    """Ray remote trial — robust import fix."""
-    # === FIX: Make 'src' importable inside every Ray worker ===
-    import sys
-    from pathlib import Path
-    project_root = str(Path(__file__).resolve().parent.parent)
-    if project_root not in sys.path:
-        sys.path.insert(0, project_root)
-    # ========================================================
-
-    print(f"\n🔬 Trial {trial_id} started with params: {params}")
+    """Local (non-Ray) version of the trial function."""
+    print(f"\nTrial {trial_id} started with params: {params}")
 
     from src.conduit import RubikConeConduit
     import torch
@@ -52,9 +33,9 @@ def run_epoch_trial(trial_id: int, params: dict):
     elif hasattr(conduit, '_build_ring_cone'):
         conduit._build_ring_cone()
 
-    print(f"   ✅ Conduit created successfully")
-    print(f"   ? Using device: {device}")
-    print(f"   ? Loaded RubikConeConduit v10.8")
+    print(f"   Conduit created successfully")
+    print(f"   Using device: {device}")
+    print(f"   Loaded RubikConeConduit v10.8")
 
     stats = {
         "active_cubes": 8,
@@ -62,7 +43,7 @@ def run_epoch_trial(trial_id: int, params: dict):
         "stability_score": 8.0,
     }
 
-    print(f"   ? Trial {trial_id} complete | braiding_phase={stats['braiding_phase']:.5f}")
+    print(f"   Trial {trial_id} complete | braiding_phase={stats['braiding_phase']:.5f}")
 
     return {
         "trial_id": trial_id,
@@ -78,8 +59,9 @@ def run_epoch_trial(trial_id: int, params: dict):
 
 # ==================== MAIN ====================
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--trials", type=int, default=60)
+    parser = argparse.ArgumentParser(description="Run epoch bake sweep (single-node or Ray)")
+    parser.add_argument("--trials", type=int, default=60, help="Number of trials (default 60)")
+    parser.add_argument("--use-ray", action="store_true", help="Use Ray for parallel execution (default: single-node)")
     args = parser.parse_args()
 
     # ULTRA-FOCUSED GRID (proven winners only)
@@ -100,10 +82,28 @@ if __name__ == "__main__":
     np.random.shuffle(param_grid)
     param_grid = param_grid[:args.trials]
 
-    print(f"   Launching {len(param_grid)} ULTRA-FOCUSED trials...")
+    print(f"   Launching {len(param_grid)} ULTRA-FOCUSED trials | Mode: {'Ray (parallel)' if args.use_ray else 'Single-node (sequential)'}")
 
-    futures = [run_epoch_trial.remote(i, p) for i, p in enumerate(param_grid)]
-    results = ray.get(futures)
+    # === EXECUTION MODE ===
+    if args.use_ray:
+        try:
+            import ray
+            ray.init(ignore_reinit_error=True)
+            print("   Ray initialized successfully - running in parallel")
+
+            @ray.remote
+            def remote_trial(trial_id, params):
+                return run_epoch_trial(trial_id, params)
+
+            futures = [remote_trial.remote(i, p) for i, p in enumerate(param_grid)]
+            results = ray.get(futures)
+
+        except Exception as e:
+            print(f"   Ray failed ({e}). Falling back to single-node mode.")
+            results = [run_epoch_trial(i, p) for i, p in enumerate(param_grid)]
+    else:
+        print("   Running sequentially (single-node mode)")
+        results = [run_epoch_trial(i, p) for i, p in enumerate(param_grid)]
 
     df = pd.DataFrame(results)
 
@@ -113,14 +113,11 @@ if __name__ == "__main__":
     report_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(report_path, index=False)
 
-    print(f"\n✅ Sweep complete! Results saved to {report_path}")
-    print(f"   W_g lock confirmed: 111.408")
-    print(f"   Braiding phase attractor confirmed")
-    print(f"\n✅ Sweep complete! Results saved to {report_path}")
+    print(f"\nSweep complete! Results saved to {report_path}")
     print(f"   W_g lock confirmed: 111.408")
     print(f"   Braiding phase attractor confirmed")
 
-    # Expand params dict into columns for nice display
+    # Expand params for nice display
     params_df = pd.json_normalize(df['params'])
     display_df = pd.concat([df.drop(columns=['params']), params_df], axis=1)
 
@@ -129,5 +126,3 @@ if __name__ == "__main__":
               ["num_layers", "num_polarities", "max_facts", "gauge_strength",
                "stability_score", "active_cubes", "braiding_phase"]
           ].to_string(index=False))
-
-    ray.shutdown()

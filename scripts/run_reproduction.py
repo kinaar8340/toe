@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-run_reproduction.py
-One-command reproduction script for Aaron’s Theory of Everything.
+run_reproduction.py — One-command reproduction with single-node vs Ray mode
 """
 
 import os
@@ -16,21 +15,18 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-# Import the sweep (now robust)
+# Import the trial function (still pure single-node compatible)
 from scripts.epoch_bake_sweep import run_epoch_trial
-
-import ray
-ray.init(address="auto", ignore_reinit_error=True)
 
 OUTPUT_DIR = Path("outputs/reproduction")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-def run_reproduction(num_trials: int = 30):
-    print("🚀 Starting Aaron’s TOE Reproduction Script")
+def run_reproduction(num_trials: int = 30, use_ray: bool = False):
+    print("Starting Aaron’s TOE Reproduction Script")
     print(f"   Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"   Trials: {num_trials} (focused Yahtzee region)\n")
+    print(f"   Trials: {num_trials} | Mode: {'Ray (parallel)' if use_ray else 'Single-node (sequential)'}")
 
-    # Focused grid (same as sweep)
+    # Focused parameter grid (same proven Yahtzee region)
     param_grid = []
     for nl in [2, 3, 4]:
         for np_val in [12, 18, 24]:
@@ -50,12 +46,32 @@ def run_reproduction(num_trials: int = 30):
 
     print(f"   Launching {len(param_grid)} focused trials...")
 
-    futures = [run_epoch_trial.remote(i, p) for i, p in enumerate(param_grid)]
-    results = ray.get(futures)
+    # === EXECUTION MODE: toggle with --use-ray ===
+    if use_ray:
+        try:
+            import ray
+            # This will connect to an existing cluster OR auto-start a local one
+            ray.init(ignore_reinit_error=True)
+            print("   Ray initialized successfully - running in parallel")
 
+            @ray.remote
+            def remote_trial(trial_id, params):
+                return run_epoch_trial(trial_id, params)
+
+            futures = [remote_trial.remote(i, p) for i, p in enumerate(param_grid)]
+            results = ray.get(futures)
+
+        except Exception as e:
+            print(f"   Ray failed to initialize ({e}). Falling back to single-node mode.")
+            results = [run_epoch_trial(i, p) for i, p in enumerate(param_grid)]
+    else:
+        print("   Running sequentially (single-node mode)")
+        results = [run_epoch_trial(i, p) for i, p in enumerate(param_grid)]
+
+    # === RESULTS PROCESSING (unchanged) ===
     df = pd.DataFrame(results)
 
-    # === EXPAND PARAMS FOR PLOTTING ===
+    # Expand params for plotting
     params_df = pd.json_normalize(df['params'])
     df = pd.concat([df.drop(columns=['params']), params_df], axis=1)
 
@@ -66,14 +82,12 @@ def run_reproduction(num_trials: int = 30):
     # === INVARIANT CHECKS ===
     wg_mean = df["w_g"].mean()
     wg_std = df["w_g"].std()
-
     braiding_mean = df["braiding_phase"].mean()
     braiding_std = df["braiding_phase"].std()
-
     active_mean = df["active_cubes"].mean()
 
     print("\n" + "="*60)
-    print("✅ REPRODUCTION RESULTS")
+    print(" REPRODUCTION RESULTS")
     print("="*60)
     print(f"W_g lock          : {wg_mean:.4f} ± {wg_std:.4f}  → {'LOCKED' if abs(wg_mean - 111.408) < 0.001 else 'DRIFT'}")
     print(f"Braiding phase    : {braiding_mean:.4f} ± {braiding_std:.4f}  (expected ~0.8145)")
@@ -92,12 +106,10 @@ def run_reproduction(num_trials: int = 30):
     plt.savefig(OUTPUT_DIR / f"stability_islands_{timestamp}.png", dpi=200)
     plt.close()
 
-    print(f"\n📊 All outputs saved to: {OUTPUT_DIR}")
+    print(f"\n All outputs saved to: {OUTPUT_DIR}")
     print("   • reproduction_results_*.csv")
     print("   • stability_islands_*.png")
-    print("\n🎉 Reproduction complete! The invariants lock as expected.")
-    print("   Share this repo — independent verification is now possible.")
-
+    print("\n Reproduction complete! The invariants lock as expected.")
     return df
 
 
@@ -105,6 +117,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Reproduce Aaron’s TOE invariants")
     parser.add_argument("--trials", type=int, default=30, help="Number of focused trials (default 30)")
+    parser.add_argument("--use-ray", action="store_true", help="Use Ray for parallel execution (default: single-node)")
     args = parser.parse_args()
 
-    run_reproduction(num_trials=args.trials)
+    run_reproduction(num_trials=args.trials, use_ray=args.use_ray)

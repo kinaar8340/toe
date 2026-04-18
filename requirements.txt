@@ -11,7 +11,7 @@ scipy>=1.10.0                   # Used in PDE solver and Laguerre-Gaussian modes
 matplotlib>=3.5.0               # Plotting stability islands and gauge evolution
 tqdm>=4.60.0                    # Progress bars in sweeps and PDE relaxation
 omegaconf>=2.3.0                # YAML config loading (configs/default.yaml)
-ray>=2.10.0                     # Parallel distributed trials (epoch_bake_sweep + run_reproduction)
+# ray>=2.10.0                     # Parallel distributed trials (epoch_bake_sweep + run_reproduction)
 
 # Optional but recommended for full reproduction
 sentence-transformers>=2.2.0    # Fact embedding (used in some qvpic tests)

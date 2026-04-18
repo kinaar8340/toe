@@ -38,43 +38,68 @@ This repository is designed so **anyone** can independently verify the core clai
 
 ## Quick Start (One-Click Reproduction)
 
-```bash
 # 1. Clone and enter repo
+```bash
 git clone https://github.com/kinaar8340/toe.git
 cd toe
-
-# 2. Create environment
-python -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Reproduce the locked invariants
-python scripts/run_reproduction.py
 ```
 
-Expected output includes:
-- W_g lock confirmation
-- Braiding phase statistics
-- Stability islands plot (saved to `outputs/reproduction/`)
+# 2. Create environment
+```bash
+python -m venv venv
+source venv/bin/activate    # Windows: venv\Scripts\activate
+```
 
----
+# 3. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+# 4. Reproduce the locked invariants
+```bash
+# Single-node (default — works on any laptop)
+python scripts/run_reproduction.py
+```
+```bash
+# Ray parallel (when you want speed)
+python scripts/run_reproduction.py --use-ray
+```
+
+# Expected output includes:
+```
+   Conduit created successfully
+   Using device: cpu
+   Loaded RubikConeConduit v10.8
+   Trial 199 complete | braiding_phase=0.81450
+
+============================================================
+ REPRODUCTION RESULTS
+============================================================
+W_g lock          : 111.4080 ± 0.0000  → LOCKED
+Braiding phase    : 0.8145 ± 0.0000  (expected ~0.8145)
+Mean active_cubes : 8.00  (stability islands observed)
+============================================================
+
+ All outputs saved to: outputs/reproduction
+   • reproduction_results_*.csv
+   • stability_islands_*.png
+
+ Reproduction complete! The invariants lock as expected.
+```
 
 ## Full File Structure
-
 ```
 toe/
 ├── src/
 │   └── conduit.py
 ├── scripts/
-│   ├── run_reproduction.py          # ← one-command verification
+│   ├── run_reproduction.py
 │   ├── epoch_bake_sweep.py
 │   ├── pde_relaxation.py
 │   ├── z_flywheel_map.py
 │   └── two_gyro_lattice_demo.py
-├── outputs/reproduction/            # ← latest results appear here
-├── papers/                          # All LaTeX sources
+├── outputs/reproduction/
+├── papers/
 ├── facts/public_facts.json
 ├── pyproject.toml
 ├── requirements.txt
@@ -83,9 +108,32 @@ toe/
 └── CONTRIBUTING.md
 ```
 
-## Papers & Documentation
+## Plots(*.png), Videos(*.mp4) & Data(*.csv)
+```
+toe/
+├── outputs/
+│   ├── pde_relaxation/
+│   │   └── twist_pde_relaxation.png
+│   ├── reproduction/
+│   │   ├── reproduction_results.csv
+│   │   └── stability_islands.png
+│   └── two_gyro_lattice/
+│       └── two_gyro_full_split_demo_FINAL.mp4
+```
 
-All LaTeX sources are in the `papers/` folder.
+## Papers & Documentation
+```
+toe/
+├── papers/
+│   ├── Aaron's_TOE_Complete.pdf
+│   ├── GW_Burste_Threshold.pdf
+│   ├── GW_Echo.pdf
+│   ├── GW_Echo_Derivation.pdf
+│   ├── Lagrangian_Derivation.pdf
+│   ├── Observer_Synchronization.pdf
+│   └── Relativistic_Completion.pdf
+
+```
 
 ## Citation
 
