@@ -30,19 +30,46 @@ pip install -r requirements.txt
 4. Run the Simulation:
 ```bash
 # Single-Node (default 30 trials)
+python scripts/epoch_bake_sweep.py
 python scripts/run_reproduction.py
 ```
 ```bash
+# Or Run the Module as a Script
+python -m scripts.epoch_bake_sweep
+python -m scripts.run_reproduction
+```
+```bash
 # Single-Node (custom)
-python scripts/run_reproduction.py --trials 2000 --dense
+python scripts/epoch_bake_sweep.py --trials 1000 --dense
+python scripts/run_reproduction.py --trials 1000 --dense
 ```
 ```bash
 # Multi-Node (custom)
-python scripts/run_reproduction.py --use-ray --trials 2000 --dense
+python scripts/epoch_bake_sweep.py --use-ray --trials 1000 --dense
+python scripts/run_reproduction.py --use-ray --trials 1000 --dense
 ```
 5. Generate Plots:
 ```bash
 python scripts/plot_sweep_results.py
+```
+6. Tests:
+```bash
+python -m pytest tests/ -q --cov=conduit
+```
+7. Python API Example:
+```bash
+from config import load_config
+from conduit import RubikConeConduit
+
+cfg = load_config("configs/default.yaml")
+model = RubikConeConduit(
+    embed_dim=cfg.model.embed_dim,
+    twist_rate=cfg.model.twist_rate,
+       # ... other params
+    )
+loss = model.training_step(inputs, optimizer)
+recall = model.recall()
+print(f"Final recall: {recall:.4f}")
 ```
 
 ## Full File Structure
