@@ -27,3 +27,18 @@ temp.md
 
 # Old timestamped plots (we keep only the latest via the plotting script)
 outputs/plots/*_2026*.png
+
+# Test and coverage artifacts
+.coverage
+coverage.xml
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+
+# Virtual environments
+venv/
+ENV/
+.env
