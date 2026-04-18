@@ -21,3 +21,9 @@ outputs/epoch_sweep_*.csv
 
 # Generated reproduction results (timestamped)
 outputs/reproduction/reproduction_results_*.csv
+
+# Temporary files
+temp.md
+
+# Old timestamped plots (we keep only the latest via the plotting script)
+outputs/plots/*_2026*.png

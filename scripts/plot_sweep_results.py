@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """
-scripts/plot_sweep_results.py — v1.1
-Automatically loads the latest epoch_sweep CSV and generates:
-• Stability islands heatmap
-• Braiding phase distribution histogram
-• Parameter vs stability scatter plots
-• Top-10 table visualization
+scripts/plot_sweep_results.py — v1.3 FINAL
+Robust against old and new CSV formats
 """
 
 import pandas as pd
@@ -14,15 +10,21 @@ import seaborn as sns
 from pathlib import Path
 import numpy as np
 from datetime import datetime
-import ast
+
+from pandas.io.formats.csvs import CSVFormatter
 
 plt.style.use('seaborn-v0_8')
 sns.set_palette("viridis")
 
+# === ROBUST OUTPUT DIRECTORY (always relative to project root) ===
+OUT_DIR = Path(__file__).resolve().parent.parent / "outputs" / "plots"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+CSV_DIR = Path(__file__).resolve().parent.parent / "outputs" / "epoch_bake"
+CSV_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_latest_csv():
-    """Find the most recent epoch_sweep_*.csv"""
-    output_dir = Path("outputs")
+    """Find the most recent epoch_sweep_*.csv in outputs/"""
+    output_dir = CSV_DIR
     csv_files = list(output_dir.glob("epoch_sweep_*.csv"))
     if not csv_files:
         raise FileNotFoundError("No epoch_sweep_*.csv found in outputs/")
@@ -31,41 +33,29 @@ def get_latest_csv():
     return latest
 
 
-def safe_parse_params(p):
-    """Robustly convert params string from CSV into dict"""
-    if isinstance(p, str):
-        cleaned = p.strip().strip('"').strip("'")
-        try:
-            return ast.literal_eval(cleaned)
-        except:
-            # fallback for any odd quoting
-            try:
-                return ast.literal_eval(cleaned.replace("'", '"'))
-            except:
-                print(f"⚠️  Could not parse params: {p[:100]}...")
-                return {}
-    return p
-
-
 def main():
     csv_path = get_latest_csv()
     df = pd.read_csv(csv_path)
 
-    # === Robust params parsing (this was the failing part) ===
-    print("   Parsing params column...")
-    df['params'] = df['params'].apply(safe_parse_params)
-    param_df = pd.json_normalize(df['params'])
-    df = pd.concat([df.drop(columns=['params']), param_df], axis=1)
-    print(f"   ✅ Parsed {len(df):,} trials successfully\n")
+    # Handle both old CSVs (with 'params' JSON column) and new CSVs (already expanded)
+    if 'params' in df.columns:
+        print("   Parsing 'params' column (old format)...")
+        df['params'] = df['params'].apply(lambda x: eval(x) if isinstance(x, str) else x)
+        param_df = pd.json_normalize(df['params'])
+        df = pd.concat([df.drop(columns=['params']), param_df], axis=1)
+    else:
+        print("   CSV already has expanded columns (new format) — good!")
 
-    # Create output directory
-    plots_dir = Path("outputs/plots")
-    plots_dir.mkdir(exist_ok=True)
+    print(f"   ✅ Loaded {len(df):,} trials successfully\n")
+
+    # Output directory
+    plots_dir = OUT_DIR
+    plots_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     print(f"Generating visualizations for {len(df):,} trials...\n")
 
-    # 1. Stability Islands Heatmap (gauge_strength × omega_R)
+    # 1. Stability Islands Heatmap
     pivot = df.pivot_table(values='stability_score',
                            index='gauge_strength',
                            columns='omega_R',
@@ -79,7 +69,7 @@ def main():
     plt.close()
     print(f"✅ Stability islands heatmap → {heatmap_path}")
 
-    # 2. Braiding Phase Distribution Histogram
+    # 2. Braiding Phase Histogram
     fig, ax = plt.subplots(figsize=(10, 6))
     sns.histplot(data=df, x='braiding_phase', bins=60, kde=True, ax=ax)
     ax.axvline(df['braiding_phase'].mean(), color='red', linestyle='--',
@@ -94,15 +84,16 @@ def main():
     plt.close()
     print(f"✅ Braiding phase histogram → {hist_path}")
 
-    # 3. Parameter vs Stability Scatter Plots (multi-panel)
+    # 3. Parameter vs Stability Scatter Plots
     params = ['num_layers', 'num_polarities', 'max_facts', 'gauge_strength', 'omega_R']
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     axes = axes.flatten()
     for i, param in enumerate(params):
-        sns.scatterplot(data=df, x=param, y='stability_score',
-                        hue='stability_score', size='active_cubes',
-                        palette="viridis", alpha=0.7, ax=axes[i])
-        axes[i].set_title(f'Stability Score vs {param}')
+        if param in df.columns:
+            sns.scatterplot(data=df, x=param, y='stability_score',
+                            hue='stability_score', size='active_cubes',
+                            palette="viridis", alpha=0.7, ax=axes[i])
+            axes[i].set_title(f'Stability Score vs {param}')
     axes[-1].axis('off')
     plt.tight_layout()
     scatter_path = plots_dir / f"param_vs_stability_scatter_{timestamp}.png"
@@ -110,7 +101,7 @@ def main():
     plt.close()
     print(f"✅ Parameter vs stability scatter plots → {scatter_path}")
 
-    # 4. Top-10 Stability Islands Table
+    # 4. Top-10 Table
     top10 = df.nlargest(10, 'stability_score')[[
         'num_layers', 'num_polarities', 'max_facts',
         'gauge_strength', 'omega_R',
