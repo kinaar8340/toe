@@ -20,8 +20,19 @@ test = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--verbose --cov=conduit --cov-report=term-missing --cov-report=xml"
+addopts = "--verbose --cov=conduit --cov-report=term-missing --cov-report=xml --cov-append"
 testpaths = ["tests"]
 markers = [
     "slow: marks tests as slow-running (deselect with '-m \"not slow\"')",
 ]
+
+[tool.coverage.run]
+parallel = true
+source = ["src/conduit"]
+omit = ["*/tests/*", "*/site-packages/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+
