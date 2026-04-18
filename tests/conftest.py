@@ -2,7 +2,8 @@
 
 import pytest
 import torch
-from conduit import RubikConeConduit, CubeChain, RingConeChain
+
+from conduit import CubeChain, RingConeChain, RubikConeConduit
 
 
 @pytest.fixture(scope="session")
@@ -18,7 +19,7 @@ def minimal_conduit():
         embed_dim=384,
         twist_rate=12.5,
         max_depth=56.0,
-        num_polarizations=3,   # ← critical: internal buffers are sized to 3
+        num_polarizations=3,  # ← critical: internal buffers are sized to 3
     )
 
 

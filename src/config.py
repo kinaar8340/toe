@@ -2,12 +2,10 @@
 # Fully config-driven with strong emphasis on security.
 # Global topological features (winding, linking, braiding phases + ShellCube differential) remain primary.
 
-import yaml
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict
 
+import yaml
 
 
 @dataclass
@@ -15,14 +13,14 @@ class ModelConfig:
     embed_dim: int = 384
     twist_rate: float = 12.5
     max_depth: float = 56.0
-    num_polarizations: int = 18          # ← best from sweep
+    num_polarizations: int = 18  # ← best from sweep
     quat_logical_dim: int = 96
 
-    # ── New epoch-sync hyperparameters (Yahtzee winners) ──
-    num_layers: int = 3                 # ← best from sweep
-    max_facts: int = 30                 # ← best from sweep (30–42 range)
-    gauge_strength: float = 0.86        # ← best from sweep
-    omega_R: float = 0.0225             # ← best from sweep (0.0215–0.0235)
+    # ── New epoch-sync hyperparameters ──
+    num_layers: int = 3  # ← best from sweep
+    max_facts: int = 30  # ← best from sweep (30-42 range)
+    gauge_strength: float = 0.86  # ← best from sweep
+    omega_R: float = 0.0225  # ← best from sweep (0.0215-0.0235)
 
 
 @dataclass
@@ -78,7 +76,7 @@ class DataConfig:
 
 @dataclass
 class IdentityConfig:
-    canonical_order: Dict[str, list] = field(default_factory=dict)
+    canonical_order: dict[str, list] = field(default_factory=dict)
 
 
 @dataclass

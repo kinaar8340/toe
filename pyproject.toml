@@ -16,23 +16,32 @@ include = ["*"]
 test = [
     "pytest>=8.1.1",
     "pytest-cov>=5.0.0",
-    "pytest-xdist>=3.5.0",   # parallel test running
+    "pytest-xdist>=3.5.0",
+    "ruff>=0.11.0",      # ← added
+    "pre-commit>=4.0.0", # ← added
 ]
 
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+include = ["src/**/*.py", "tests/**/*.py", "*.py"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "I", "W",   # pycodestyle, pyflakes, isort, warnings
+    "B", "C4", "SIM",     # bugbear, comprehensions, simplify
+    "UP", "RUF", "PLC",   # pyupgrade, ruff, pylint
+]
+ignore = ["E501", "E402", "B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
 [tool.pytest.ini_options]
-addopts = "--verbose --cov=conduit --cov-report=term-missing --cov-report=xml --cov-append"
+addopts = "--verbose --cov=conduit --cov-report=term-missing --cov-report=xml"
 testpaths = ["tests"]
 markers = [
     "slow: marks tests as slow-running (deselect with '-m \"not slow\"')",
 ]
-
-[tool.coverage.run]
-parallel = true
-source = ["src/conduit"]
-omit = ["*/tests/*", "*/site-packages/*"]
-
-[tool.coverage.report]
-show_missing = true
-skip_covered = true
-
-

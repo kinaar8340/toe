@@ -3,14 +3,14 @@
 scripts/epoch_bake_sweep.py — v2.9 FINAL ROBUST VERSION (dense + defensive)
 """
 
-import os
-import sys
-import pandas as pd
 import argparse
-import numpy as np
-import torch
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import torch
 
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
@@ -20,14 +20,16 @@ if str(project_root) not in sys.path:
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "outputs" / "epoch_bake"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+
 def run_epoch_trial(trial_id: int, params: dict):
     from src.conduit import RubikConeConduit
+
     print(f"Trial {trial_id} started with params: {params}")
 
     conduit = RubikConeConduit(
         num_polarizations=params["num_polarities"],
         gauge_strength=params["gauge_strength"],
-        omega_R=params["omega_R"]
+        omega_R=params["omega_R"],
     )
     conduit.num_layers = params["num_layers"]
     conduit.max_facts = params["max_facts"]
@@ -43,7 +45,7 @@ def run_epoch_trial(trial_id: int, params: dict):
         conduit._build_ring_cone()
     else:
         print("   ??  No build_ring_cone method found — skipping explicit build")
-    print(f"   RingCone built with {params['num_layers']} layers × {params['max_facts']} facts")
+    print(f"   RingCone built with {params['num_layers']} layers X {params['max_facts']} facts")
 
     # === SAFE SIMULATION (no reliance on missing attributes) ===
     try:
@@ -68,12 +70,16 @@ def run_epoch_trial(trial_id: int, params: dict):
         braiding_phase = max(0.8120, min(0.8170, braiding_phase + variation))
 
     # Stability metrics
-    stability_score = 8.0 - abs(params["gauge_strength"] - 0.88) * 10 - abs(params["omega_R"] - 0.0225) * 200
+    stability_score = (
+        8.0 - abs(params["gauge_strength"] - 0.88) * 10 - abs(params["omega_R"] - 0.0225) * 200
+    )
     active_cubes = int(8 + np.random.normal(0, 2))
     active_cubes = max(12, min(16, active_cubes))
     w_g = 111.408 + np.random.normal(0, 0.001)
 
-    print(f"   Trial {trial_id} complete | braiding_phase={braiding_phase:.5f} | stability={stability_score:.2f}")
+    print(
+        f"   Trial {trial_id} complete | braiding_phase={braiding_phase:.5f} | stability={stability_score:.2f}"
+    )
 
     return {
         "trial_id": trial_id,
@@ -83,8 +89,9 @@ def run_epoch_trial(trial_id: int, params: dict):
         "stability_score": round(stability_score, 2),
         "version": conduit.VERSION,
         "timestamp": datetime.now().isoformat(),
-        "params": params
+        "params": params,
     }
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run REAL epoch bake sweep")
@@ -94,7 +101,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     mode_str = "DENSE sweet-spot grid" if args.dense else "Ultra-focused grid"
-    print(f"   Launching {args.trials} REAL trials | Mode: {mode_str} | {'Ray (parallel)' if args.use_ray else 'Single-node (sequential)'}")
+    print(
+        f"   Launching {args.trials} REAL trials | Mode: {mode_str} | {'Ray (parallel)' if args.use_ray else 'Single-node (sequential)'}"
+    )
 
     # Grid
     if args.dense:
@@ -110,32 +119,39 @@ if __name__ == "__main__":
             for mf in [24, 30, 36, 42, 48]:
                 for gs in gs_values:
                     for omega_r in omega_values:
-                        base_grid.append({
-                            "num_layers": nl,
-                            "num_polarities": np_val,
-                            "max_facts": mf,
-                            "gauge_strength": gs,
-                            "omega_R": omega_r,
-                        })
+                        base_grid.append(
+                            {
+                                "num_layers": nl,
+                                "num_polarities": np_val,
+                                "max_facts": mf,
+                                "gauge_strength": gs,
+                                "omega_R": omega_r,
+                            }
+                        )
 
     if args.trials <= len(base_grid):
-        param_grid = base_grid[:args.trials]
+        param_grid = base_grid[: args.trials]
     else:
-        print(f"   Base grid has only {len(base_grid)} unique combos → repeating for {args.trials} trials")
+        print(
+            f"   Base grid has only {len(base_grid)} unique combos → repeating for {args.trials} trials"
+        )
         repeats = (args.trials // len(base_grid)) + 1
         param_grid = base_grid * repeats
         np.random.shuffle(param_grid)
-        param_grid = param_grid[:args.trials]
+        param_grid = param_grid[: args.trials]
 
     # Execution
     if args.use_ray:
         try:
             import ray
+
             ray.init(ignore_reinit_error=True, address="auto")
             print("   Ray initialized successfully - running in parallel")
+
             @ray.remote
             def remote_trial(trial_id, params):
                 return run_epoch_trial(trial_id, params)
+
             futures = [remote_trial.remote(i, p) for i, p in enumerate(param_grid)]
             results = ray.get(futures)
         except Exception as e:
@@ -147,7 +163,7 @@ if __name__ == "__main__":
 
     # Save & report
     df = pd.DataFrame(results)
-    df = pd.concat([df.drop(columns=['params']), pd.json_normalize(df['params'])], axis=1)
+    df = pd.concat([df.drop(columns=["params"]), pd.json_normalize(df["params"])], axis=1)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_path = OUTPUT_DIR / f"epoch_sweep_{timestamp}.csv"
@@ -155,10 +171,17 @@ if __name__ == "__main__":
 
     print(f"Sweep complete! Results saved to {csv_path}")
     print(f"   W_g lock: {df['w_g'].mean():.3f}")
-    print(f"   Braiding phase attractor confirmed")
+    print("   Braiding phase attractor confirmed")
     print("\nTop 10 stability islands:")
-    top10 = df.nlargest(10, 'stability_score')[[
-        'num_layers', 'num_polarities', 'max_facts', 'gauge_strength',
-        'stability_score', 'active_cubes', 'braiding_phase'
-    ]]
+    top10 = df.nlargest(10, "stability_score")[
+        [
+            "num_layers",
+            "num_polarities",
+            "max_facts",
+            "gauge_strength",
+            "stability_score",
+            "active_cubes",
+            "braiding_phase",
+        ]
+    ]
     print(top10.to_string(index=False))

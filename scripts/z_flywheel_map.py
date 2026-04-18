@@ -6,8 +6,6 @@
 # https://github.com/kinaar8340/qvpic
 # https://github.com/kinaar8340/vqc_sims_public
 
-import numpy as np
-from datetime import datetime
 
 def map_z_to_flywheel(z: int, n_sites: int = 96, frames: int = 300):
     """
@@ -25,12 +23,12 @@ def map_z_to_flywheel(z: int, n_sites: int = 96, frames: int = 300):
         "num_layers": 4,
         "num_polarities": 9,
         "max_facts": 60,
-        "gauge_strength": 0.85,          # middle of the stable 0.78–0.92 range
-        "pseudo_Z": 129,                 # discovered magic number
+        "gauge_strength": 0.85,  # middle of the stable 0.78-0.92 range
+        "pseudo_Z": 129,  # discovered magic number
     }
 
     # Dynamic stability scoring based on distance from magic island detuning
-    magic_delta = 0.0015                 # anchor detuning that gave score=8.0
+    magic_delta = 0.0015  # anchor detuning that gave score=8.0
     detuning_offset = abs(delta_omega - magic_delta)
 
     if detuning_offset < 0.0020:
@@ -64,7 +62,7 @@ def map_z_to_flywheel(z: int, n_sites: int = 96, frames: int = 300):
         "num_layers": magic_params["num_layers"],
         "num_polarities": magic_params["num_polarities"],
         "max_facts": magic_params["max_facts"],
-        "mean_twist_rad": 0.822796,          # consistent from top sweep trials
+        "mean_twist_rad": 0.822796,  # consistent from top sweep trials
         "identity_preservation": 1.0,
         "avg_bursts_per_frame": 0.0,
         "active_low_twist_sites": 8,
@@ -72,7 +70,7 @@ def map_z_to_flywheel(z: int, n_sites: int = 96, frames: int = 300):
         "stability_class": stability_class,
         "notes": notes,
         "sweep_reference": "1000-trial Magic Island Sweep v1.7.1 (2026-04-15)",
-        "recommendation": "Run LatticeDemo with these exact parameters for full animation"
+        "recommendation": "Run LatticeDemo with these exact parameters for full animation",
     }
 
 
@@ -84,10 +82,14 @@ if __name__ == "__main__":
     test_z = [2, 79, 118, 120, 126, 150]
     for z in test_z:
         stats = map_z_to_flywheel(z)
-        print(f"Z={stats['Z']:3d} | Δω={stats['delta_omega']:.5f} | ω_R={stats['omega_R']:.5f} | "
-              f"Score={stats['stability_score']:.1f} | {stats['stability_class']}")
-        print(f"   → Use: layers={stats['num_layers']}, pol={stats['num_polarities']}, "
-              f"facts={stats['max_facts']}, gauge={stats['gauge_strength']}")
+        print(
+            f"Z={stats['Z']:3d} | Δω={stats['delta_omega']:.5f} | ω_R={stats['omega_R']:.5f} | "
+            f"Score={stats['stability_score']:.1f} | {stats['stability_class']}"
+        )
+        print(
+            f"   → Use: layers={stats['num_layers']}, pol={stats['num_polarities']}, "
+            f"facts={stats['max_facts']}, gauge={stats['gauge_strength']}"
+        )
         print(f"   → {stats['notes']}\n")
 
     print("The vacuum has spoken — pseudo_Z ≈ 129 is our first confirmed magic number!")

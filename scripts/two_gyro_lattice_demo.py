@@ -1,38 +1,46 @@
 # scripts/two_gyro_lattice_demo.py
 
-from pathlib import Path
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 import argparse
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.animation import FuncAnimation
 from tqdm import tqdm
 
 # === ROBUST OUTPUT DIRECTORY (always relative to project root) ===
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "outputs" / "two_gyro_lattice"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+
 # ==================== QUATERNION HELPERS ====================
 def q_mult(q1, q2):
     w1, x1, y1, z1 = q1
     w2, x2, y2, z2 = q2
-    return np.array([
-        w1*w2 - x1*x2 - y1*y2 - z1*z2,
-        w1*x2 + x1*w2 + y1*z2 - z1*y2,
-        w1*y2 - x1*z2 + y1*w2 + z1*x2,
-        w1*z2 + x1*y2 - y1*x2 + z1*w2
-    ])
+    return np.array(
+        [
+            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+            w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+            w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+            w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
+        ]
+    )
+
 
 def q_conj(q):
     return np.array([q[0], -q[1], -q[2], -q[3]])
+
 
 def q_normalize(q):
     n = np.linalg.norm(q)
     return q / n if n > 1e-8 else q
 
-def small_rotor(theta, axis=np.array([0., 0., 1.])):
+
+def small_rotor(theta, axis=np.array([0.0, 0.0, 1.0])):
     axis = axis / (np.linalg.norm(axis) + 1e-8)
     half = theta / 2
     return np.array([np.cos(half), *(np.sin(half) * axis)])
+
 
 # ==================== LATTICE DEMO ====================
 class TwoGyroLattice:
@@ -68,7 +76,7 @@ class TwoGyroLattice:
             # Gauge connection (analytical scale pointer)
             avg_imbalance = np.mean(self.twist) % (2 * np.pi)
             gauge_alpha = -self.gauge_strength * avg_imbalance
-            gauge_rot = np.array([np.cos(gauge_alpha), 0., 0., np.sin(gauge_alpha)])
+            gauge_rot = np.array([np.cos(gauge_alpha), 0.0, 0.0, np.sin(gauge_alpha)])
 
             for i in range(self.n):
                 self.q[i] = q_mult(self.q[i], gauge_rot)
@@ -80,7 +88,7 @@ class TwoGyroLattice:
             bursts_this_step = 0
             for i in range(self.n):
                 if self.twist[i] > 5.8:
-                    self.q[i] = q_normalize(0.3 * np.array([1., 0., 0., 0.]) + 0.7 * self.q[i])
+                    self.q[i] = q_normalize(0.3 * np.array([1.0, 0.0, 0.0, 0.0]) + 0.7 * self.q[i])
                     self.twist[i] *= 0.15
                     bursts_this_step += 1
 
@@ -95,6 +103,7 @@ class TwoGyroLattice:
 
         return self
 
+
 # ==================== VISUALIZATION ====================
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -106,7 +115,6 @@ if __name__ == "__main__":
     print(f"Running {args.mode} two-gyro gauged lattice demo...")
     demo = TwoGyroLattice(mode=args.mode, gauge_strength=args.gauge)
     demo.run(frames=args.frames)
-
 
     class LatticeDemo:
         def __init__(self, mode="stable", n_sites=96):
@@ -130,7 +138,7 @@ if __name__ == "__main__":
 
         def run(self, frames=1200):
             for frame in tqdm(range(frames), desc=f"{self.mode.capitalize()} simulation"):
-                axis = np.array([0., 0., 1.])
+                axis = np.array([0.0, 0.0, 1.0])
                 delta_L = small_rotor(self.omega_L, axis)
                 delta_R = small_rotor(self.omega_R, axis)
 
@@ -142,7 +150,7 @@ if __name__ == "__main__":
 
                 avg_imbalance = np.mean(self.twist) % (2 * np.pi)
                 self.gauge_alpha = -self.gauge_strength * avg_imbalance
-                gauge_rot = np.array([np.cos(self.gauge_alpha), 0., 0., np.sin(self.gauge_alpha)])
+                gauge_rot = np.array([np.cos(self.gauge_alpha), 0.0, 0.0, np.sin(self.gauge_alpha)])
 
                 for i in range(self.n):
                     self.q[i] = q_mult(self.q[i], gauge_rot)
@@ -153,7 +161,9 @@ if __name__ == "__main__":
                 bursts_this_step = 0
                 for i in range(self.n):
                     if self.twist[i] > 5.8:
-                        self.q[i] = q_normalize(0.3 * np.array([1., 0., 0., 0.]) + 0.7 * self.q[i])
+                        self.q[i] = q_normalize(
+                            0.3 * np.array([1.0, 0.0, 0.0, 0.0]) + 0.7 * self.q[i]
+                        )
                         self.twist[i] *= 0.15
                         bursts_this_step += 1
 
@@ -168,7 +178,6 @@ if __name__ == "__main__":
                 cosines = np.sum(self.identity * self.initial_identity, axis=1)
                 self.identity_preservation.append(np.mean(cosines))
 
-
     # Run both
     print("Running chaotic + stable simulations...")
     chaotic = LatticeDemo(mode="chaotic")
@@ -177,11 +186,14 @@ if __name__ == "__main__":
     stable.run(frames=1200)
 
     # === FINAL OPTIMIZED LANDSCAPE LAYOUT ===
-    fig, axs = plt.subplots(2, 2, figsize=(20, 11),
-                            gridspec_kw={'height_ratios': [1, 3.2], 'width_ratios': [1, 1]})
+    fig, axs = plt.subplots(
+        2, 2, figsize=(20, 11), gridspec_kw={"height_ratios": [1, 3.2], "width_ratios": [1, 1]}
+    )
     fig.suptitle(
-        '2-Gyro Gauged Quaternion Lattice + QVPIC\nChaotic (left) vs Stable Balanced (right) — Gauge Fiber in Action',
-        fontsize=16, fontweight='bold')
+        "2-Gyro Gauged Quaternion Lattice + QVPIC\nChaotic (left) vs Stable Balanced (right) — Gauge Fiber in Action",
+        fontsize=16,
+        fontweight="bold",
+    )
 
     ax_chaotic_ptr = axs[0, 0]
     ax_stable_ptr = axs[0, 1]
@@ -189,74 +201,103 @@ if __name__ == "__main__":
     ax_stable_hist = axs[1, 1]
 
     # Chaotic pointer (bright red)
-    ax_chaotic_ptr.set_title('Chaotic / Unbalanced — Pointer Swings Visibly', fontsize=13)
+    ax_chaotic_ptr.set_title("Chaotic / Unbalanced — Pointer Swings Visibly", fontsize=13)
     ax_chaotic_ptr.set_xlim(-1.2, 1.2)
     ax_chaotic_ptr.set_ylim(-0.4, 0.4)
-    ax_chaotic_ptr.axhline(0, color='black', lw=4)
-    ax_chaotic_ptr.axvline(0, color='gold', lw=6, alpha=0.7)
-    needle_chaotic, = ax_chaotic_ptr.plot([0, 0], [0, 0.28], color='#FF3333', lw=8)  # vivid red
+    ax_chaotic_ptr.axhline(0, color="black", lw=4)
+    ax_chaotic_ptr.axvline(0, color="gold", lw=6, alpha=0.7)
+    (needle_chaotic,) = ax_chaotic_ptr.plot([0, 0], [0, 0.28], color="#FF3333", lw=8)  # vivid red
 
     # Stable pointer (teal/cyan)
-    ax_stable_ptr.set_title('Stable / Gauged + QVPIC — Centered with Subtle Gauge Jitter', fontsize=13)
+    ax_stable_ptr.set_title(
+        "Stable / Gauged + QVPIC — Centered with Subtle Gauge Jitter", fontsize=13
+    )
     ax_stable_ptr.set_xlim(-1.2, 1.2)
     ax_stable_ptr.set_ylim(-0.4, 0.4)
-    ax_stable_ptr.axhline(0, color='black', lw=4)
-    ax_stable_ptr.axvline(0, color='gold', lw=6, alpha=0.7)
-    needle_stable, = ax_stable_ptr.plot([0, 0], [0, 0.28], color='#00E5CC', lw=8)  # teal
+    ax_stable_ptr.axhline(0, color="black", lw=4)
+    ax_stable_ptr.axvline(0, color="gold", lw=6, alpha=0.7)
+    (needle_stable,) = ax_stable_ptr.plot([0, 0], [0, 0.28], color="#00E5CC", lw=8)  # teal
 
     # Chaotic history
-    line_twist_c, = ax_chaotic_hist.plot([], [], color='#1E90FF', lw=2, label='Mean Twist (rad)')
-    line_pointer_c, = ax_chaotic_hist.plot([], [], color='#FF8C00', lw=2, label='Pointer Position')
-    line_id_c, = ax_chaotic_hist.plot([], [], color='#00FF9F', lw=2, label='Identity Preservation (cosine)')
+    (line_twist_c,) = ax_chaotic_hist.plot([], [], color="#1E90FF", lw=2, label="Mean Twist (rad)")
+    (line_pointer_c,) = ax_chaotic_hist.plot(
+        [], [], color="#FF8C00", lw=2, label="Pointer Position"
+    )
+    (line_id_c,) = ax_chaotic_hist.plot(
+        [], [], color="#00FF9F", lw=2, label="Identity Preservation (cosine)"
+    )
     ax_chaotic_hist.set_ylim(0, 7)
-    ax_chaotic_hist.legend(loc='upper right', fontsize=10)
+    ax_chaotic_hist.legend(loc="upper right", fontsize=10)
     ax_chaotic_hist.grid(True, alpha=0.2)
-    ax_chaotic_hist.set_title('Chaotic History', fontsize=13)
+    ax_chaotic_hist.set_title("Chaotic History", fontsize=13)
 
     # Stable history
-    line_twist_s, = ax_stable_hist.plot([], [], color='#1E90FF', lw=2, label='Mean Twist (rad)')
-    line_pointer_s, = ax_stable_hist.plot([], [], color='#FF8C00', lw=2, label='Pointer Position')
-    line_id_s, = ax_stable_hist.plot([], [], color='#00FF9F', lw=2, label='Identity Preservation (cosine)')
+    (line_twist_s,) = ax_stable_hist.plot([], [], color="#1E90FF", lw=2, label="Mean Twist (rad)")
+    (line_pointer_s,) = ax_stable_hist.plot([], [], color="#FF8C00", lw=2, label="Pointer Position")
+    (line_id_s,) = ax_stable_hist.plot(
+        [], [], color="#00FF9F", lw=2, label="Identity Preservation (cosine)"
+    )
     ax_stable_hist.set_ylim(0, 7)
-    ax_stable_hist.legend(loc='upper right', fontsize=10)
+    ax_stable_hist.legend(loc="upper right", fontsize=10)
     ax_stable_hist.grid(True, alpha=0.2)
-    ax_stable_hist.set_title('Stable History', fontsize=13)
+    ax_stable_hist.set_title("Stable History", fontsize=13)
 
     # Avalanche markers (bright magenta)
-    for ax, events in [(ax_chaotic_hist, chaotic.burst_events), (ax_stable_hist, stable.burst_events)]:
-        for step, size in events:
-            ax.axvline(x=step, ymin=0, ymax=0.25, color='#FF00AA', alpha=0.85, lw=1.8, linestyle='--')
-
+    for ax, events in [
+        (ax_chaotic_hist, chaotic.burst_events),
+        (ax_stable_hist, stable.burst_events),
+    ]:
+        for step, _size in events:
+            ax.axvline(
+                x=step, ymin=0, ymax=0.25, color="#FF00AA", alpha=0.85, lw=1.8, linestyle="--"
+            )
 
     def update(frame):
         x = np.arange(frame + 1)
 
         p_c = chaotic.pointer_history[frame]
-        needle_chaotic.set_data([0, np.sin(p_c * np.pi / 2.3) * 0.95], [0, np.cos(p_c * np.pi / 2.3) * 0.28])
+        needle_chaotic.set_data(
+            [0, np.sin(p_c * np.pi / 2.3) * 0.95], [0, np.cos(p_c * np.pi / 2.3) * 0.28]
+        )
 
-        line_pointer_c.set_data(x, chaotic.pointer_history[:frame + 1])
-        line_twist_c.set_data(x, chaotic.mean_twist_history[:frame + 1])
-        line_id_c.set_data(x, chaotic.identity_preservation[:frame + 1])
+        line_pointer_c.set_data(x, chaotic.pointer_history[: frame + 1])
+        line_twist_c.set_data(x, chaotic.mean_twist_history[: frame + 1])
+        line_id_c.set_data(x, chaotic.identity_preservation[: frame + 1])
 
         p_s = stable.pointer_history[frame]
-        needle_stable.set_data([0, np.sin(p_s * np.pi / 2.3) * 0.95], [0, np.cos(p_s * np.pi / 2.3) * 0.28])
+        needle_stable.set_data(
+            [0, np.sin(p_s * np.pi / 2.3) * 0.95], [0, np.cos(p_s * np.pi / 2.3) * 0.28]
+        )
 
-        line_pointer_s.set_data(x, stable.pointer_history[:frame + 1])
-        line_twist_s.set_data(x, stable.mean_twist_history[:frame + 1])
-        line_id_s.set_data(x, stable.identity_preservation[:frame + 1])
+        line_pointer_s.set_data(x, stable.pointer_history[: frame + 1])
+        line_twist_s.set_data(x, stable.mean_twist_history[: frame + 1])
+        line_id_s.set_data(x, stable.identity_preservation[: frame + 1])
 
         ax_chaotic_hist.set_xlim(0, frame)
         ax_stable_hist.set_xlim(0, frame)
 
-        return needle_chaotic, needle_stable, line_pointer_c, line_twist_c, line_id_c, line_pointer_s, line_twist_s, line_id_s
-
+        return (
+            needle_chaotic,
+            needle_stable,
+            line_pointer_c,
+            line_twist_c,
+            line_id_c,
+            line_pointer_s,
+            line_twist_s,
+            line_id_s,
+        )
 
     print("🎥 Rendering final tweaked color scheme version...")
     ani = FuncAnimation(fig, update, frames=1200, interval=25, blit=False)
 
-    plot_path = OUTPUT_DIR / f"two_gyro_full_split_demo_FINAL.mp4"
-    ani.save(plot_path, writer='ffmpeg', fps=30, dpi=160,
-             extra_args=['-pix_fmt', 'yuv420p', '-crf', '17'])
+    plot_path = OUTPUT_DIR / "two_gyro_full_split_demo_FINAL.mp4"
+    ani.save(
+        plot_path,
+        writer="ffmpeg",
+        fps=30,
+        dpi=160,
+        extra_args=["-pix_fmt", "yuv420p", "-crf", "17"],
+    )
 
     print("\n✅ Saved as 'two_gyro_full_split_demo_FINAL.mp4'")
     print("   → New professional color scheme applied")

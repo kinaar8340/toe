@@ -13,11 +13,12 @@ Run with:
 Outputs saved to: ~/Projects/toe/outputs/pde_relaxation/
 """
 
-from pathlib import Path
-import numpy as np
-import matplotlib.pyplot as plt
-from tqdm import tqdm
 from datetime import datetime
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+from tqdm import tqdm
 
 # === ROBUST OUTPUT DIRECTORY (always relative to project root) ===
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "outputs" / "pde_relaxation"
@@ -25,14 +26,14 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def simulate_twist_pde(
-        nx: int = 24,
-        nt: int = 5000,
-        dt: float = 0.001,
-        D: float = 0.05,
-        kappa: float = 0.85,
-        delta_omega: float = 0.002,
-        theta_crit: float = 5.8,
-        save_plot: bool = True
+    nx: int = 24,
+    nt: int = 5000,
+    dt: float = 0.001,
+    D: float = 0.05,
+    kappa: float = 0.85,
+    delta_omega: float = 0.002,
+    theta_crit: float = 5.8,
+    save_plot: bool = True,
 ):
     """
     Solve the nonlinear twist-field PDE on a periodic 3-torus:
@@ -47,21 +48,30 @@ def simulate_twist_pde(
     theta = np.random.uniform(0.1, 2.0, (nx, nx, nx))
     mean_history = []
 
-    for step in tqdm(range(nt), desc="PDE relaxation"):
+    for _step in tqdm(range(nt), desc="PDE relaxation"):
         # Laplacian (periodic boundaries)
         lap = (
-                      np.roll(theta, 1, 0) + np.roll(theta, -1, 0) +
-                      np.roll(theta, 1, 1) + np.roll(theta, -1, 1) +
-                      np.roll(theta, 1, 2) + np.roll(theta, -1, 2) - 6 * theta
-              ) / (1.0 / nx) ** 2
+            np.roll(theta, 1, 0)
+            + np.roll(theta, -1, 0)
+            + np.roll(theta, 1, 1)
+            + np.roll(theta, -1, 1)
+            + np.roll(theta, 1, 2)
+            + np.roll(theta, -1, 2)
+            - 6 * theta
+        ) / (1.0 / nx) ** 2
 
         # Nonlinear cotangent term
-        with np.errstate(divide='ignore', invalid='ignore'):
-            cot_term = (D / 2.0) * np.cos(theta / 2.0) / np.sin(theta / 2.0) * (
-                    np.gradient(theta, axis=0) ** 2 +
-                    np.gradient(theta, axis=1) ** 2 +
-                    np.gradient(theta, axis=2) ** 2
-            ).sum(axis=0)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            cot_term = (
+                (D / 2.0)
+                * np.cos(theta / 2.0)
+                / np.sin(theta / 2.0)
+                * (
+                    np.gradient(theta, axis=0) ** 2
+                    + np.gradient(theta, axis=1) ** 2
+                    + np.gradient(theta, axis=2) ** 2
+                ).sum(axis=0)
+            )
 
         # Global mean-field gauge restoring torque
         bar_theta = theta.mean()
@@ -85,7 +95,7 @@ def simulate_twist_pde(
     # Save plot
     if save_plot:
         plt.figure(figsize=(10, 6))
-        plt.plot(mean_history, color='green', linewidth=1.5)
+        plt.plot(mean_history, color="green", linewidth=1.5)
         plt.xlabel("Time step")
         plt.ylabel("Mean twist ⟨θ⟩ (rad)")
         plt.title("Gauged Two-Gyro PDE Relaxation on 3-Torus")

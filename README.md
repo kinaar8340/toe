@@ -32,11 +32,11 @@ python scripts/run_reproduction.py
 ```
 ```bash
 # Single-Node (custom)
-python scripts/run_reproduction.py --trials 2000 --dense  
+python scripts/run_reproduction.py --trials 2000 --dense
 ```
 ```bash
 # Multi-Node (custom)
-python scripts/run_reproduction.py --use-ray --trials 2000 --dense   
+python scripts/run_reproduction.py --use-ray --trials 2000 --dense
 ```
 5. Generate Plots:
 ```bash
@@ -142,4 +142,3 @@ Date:   April 2026
 Thank you for helping verify the locked invariants!
 
 ---
-

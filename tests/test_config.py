@@ -8,7 +8,7 @@ project_root = Path(__file__).parent.parent
 if str(project_root / "src") not in sys.path:
     sys.path.insert(0, str(project_root / "src"))
 
-from config import load_config, ModelConfig
+from config import ModelConfig, load_config
 
 
 def test_default_config():
