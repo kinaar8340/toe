@@ -747,6 +747,9 @@ class RubikConeConduit(TwistedHelicalConduit):
         clifford_projection: bool = True,
         gauge_strength: float = 0.88,
         omega_R: float = 0.0225,
+        wg_base: float = 350.0,
+        kappa: float = 0.85,
+        braiding_target: float = 0.8145,
     ):
         super().__init__(
             embed_dim=embed_dim,
@@ -763,6 +766,9 @@ class RubikConeConduit(TwistedHelicalConduit):
         self.num_polarizations = num_polarizations
         self.gauge_strength = gauge_strength
         self.omega_R = omega_R
+        self.wg_base = wg_base
+        self.kappa = kappa
+        self.braiding_target = braiding_target
 
         # RingConeChain (required for monitor_topological_winding and forward)
         self.ring_cone = RingConeChain(embed_dim=embed_dim, device=self.device)
