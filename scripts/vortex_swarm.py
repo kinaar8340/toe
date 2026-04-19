@@ -194,17 +194,25 @@ def run_qvpic_trial(trial_id: int, params: dict):
     }
 
 
+# ==================== REMOTE WRAPPER (add this) ====================
+@ray.remote(num_cpus=12, max_retries=2, scheduling_strategy="SPREAD")
+def remote_trial(trial_id: int, params: dict):
+    """Remote wrapper so we can dynamically set num_gpus per trial"""
+    return run_qvpic_trial(trial_id, params)
+
+
 # ==================== LAUNCH ====================
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Vortex Swarm (TOE) — GPU enabled")
-    parser.add_argument("--trials", type=int, default=12)
-    parser.add_argument("--max-facts", type=int, default=9)
+    parser = argparse.ArgumentParser(description="Vortex Swarm (TOE) — Mixed GPU+CPU")
+    parser.add_argument("--trials", type=int, default=120)
+    parser.add_argument("--max-facts", type=int, default=120)
     parser.add_argument("--use-ray", action="store_true")
+    parser.add_argument("--gpu-per-trial", type=float, default=0.25)
     parser.add_argument(
-        "--gpu-per-trial",
-        type=float,
-        default=0.3,  # ← NEW: 30% GPU each
-        help="Fractional GPU per trial (0.3 = 30% of one 4090)",
+        "--max-gpu-trials",
+        type=int,
+        default=6,  # ← NEW: controls how many use GPU
+        help="Max number of trials that request GPU (rest run on pure CPU nodes)",
     )
     args = parser.parse_args()
 
@@ -227,32 +235,34 @@ if __name__ == "__main__":
         for gh in [True, False]
     ][: args.trials]
 
-    print("🌟 Magic Island Sweep — Flux Flywheel Resonance Hunter")
+    print("🌟 Vortex Swarm — Mixed GPU+CPU mode")
     print(
-        f"→ Launching {len(param_grid)} trials | GPU per trial = {args.gpu_per_trial} | Mode: {'Ray' if args.use_ray else 'Single'}"
+        f"→ Total trials: {len(param_grid)} | Max GPU trials: {args.max_gpu_trials} | GPU per trial: {args.gpu_per_trial}"
     )
 
-if args.use_ray:
-    try:
-        ray.init(address="auto", ignore_reinit_error=True)
-        print(f"   🌟 Ray initialized — {len(ray.nodes())} nodes available")
+    if args.use_ray:
+        try:
+            ray.init(address="auto", ignore_reinit_error=True)
+            print(f"   🌟 Ray initialized — {len(ray.nodes())} nodes available")
 
-        @ray.remote(num_cpus=12, num_gpus=0, max_retries=2, scheduling_strategy="SPREAD")
-        def remote_trial(trial_id: int, params: dict):
-            return run_qvpic_trial(trial_id, params)
+            futures = []
+            for i, p in enumerate(param_grid):
+                if i < args.max_gpu_trials:
+                    # GPU trial (runs on bud's 4090)
+                    future = remote_trial.options(num_gpus=args.gpu_per_trial).remote(i, p)
+                else:
+                    # Pure CPU trial (cpu multi node)
+                    future = remote_trial.options(num_gpus=0).remote(i, p)
+                futures.append(future)
 
-        futures = []
-        for i, p in enumerate(param_grid):
-            future = remote_trial.options(num_gpus=args.gpu_per_trial).remote(i, p)
-            futures.append(future)
-        results = ray.get(futures)
-        ray.shutdown()
-    except Exception as e:
-        print(f"   Ray failed ({e}) — falling back to single-node")
+            results = ray.get(futures)
+            ray.shutdown()
+        except Exception as e:
+            print(f"   Ray failed ({e}) — falling back to single-node")
+            results = [run_qvpic_trial(i, p) for i, p in enumerate(param_grid)]
+    else:
+        print("   🔄 Running sequentially (single-node mode)")
         results = [run_qvpic_trial(i, p) for i, p in enumerate(param_grid)]
-else:
-    print("   🔄 Running sequentially (single-node mode)")
-    results = [run_qvpic_trial(i, p) for i, p in enumerate(param_grid)]
 
     df = pd.DataFrame(results)
     report_path = Path(f"outputs/swarm_report_{datetime.now():%Y%m%d_%H%M%S}.md")

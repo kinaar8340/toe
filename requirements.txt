@@ -12,9 +12,12 @@ seaborn>=0.13.2                 #
 matplotlib>=3.10.8              # Plotting stability islands and gauge evolution
 tqdm>=4.67.3                    # Progress bars in sweeps and PDE relaxation
 omegaconf>=2.3.0                # YAML config loading (configs/default.yaml)
-ray>=2.55.0                     # Parallel distributed trials (epoch_bake_sweep + run_reproduction)
+ray>=2.55.0                     # API for building distributed applications https://github.com/ray-project/ray
 types-pyyaml>=6.0.12            # Typing stubs for PyYAML https://github.com/python/typeshed
-tabulate>=0.10.0                #Pretty-print tabular data https://github.com/astanin/python-tabulate
+tabulate>=0.10.0                # Pretty-print tabular data https://github.com/astanin/python-tabulate
+optuna>=4.8.0                   # A hyperparameter optimization framework https://optuna.org/
+
+
 
 # Optional but recommended for full reproduction
 sentence-transformers>=5.4.1   # Fact embedding (used in some qvpic tests)
