@@ -14,6 +14,7 @@ tqdm>=4.67.3                    # Progress bars in sweeps and PDE relaxation
 omegaconf>=2.3.0                # YAML config loading (configs/default.yaml)
 ray>=2.55.0                     # Parallel distributed trials (epoch_bake_sweep + run_reproduction)
 types-pyyaml>=6.0.12            # Typing stubs for PyYAML https://github.com/python/typeshed
+tabulate>=0.10.0                #Pretty-print tabular data https://github.com/astanin/python-tabulate
 
 # Optional but recommended for full reproduction
 sentence-transformers>=5.4.1   # Fact embedding (used in some qvpic tests)
