@@ -1,0 +1,132 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+
+
+\title{Burst Threshold Derivation in the Gauged Two-Gyro Hopf Lattice}
+\author{Aaron Kinder \\ Independent Researcher}
+\date{April 2026 \\ \small Revision: June 2026 --- dual-threshold reconciliation}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The burst threshold governs when the local twist density $\Theta = 2\arccos(\operatorname{Re} q)$
+triggers flux shedding in the gauged two-gyro Hopf lattice. We distinguish two related but numerically
+distinct quantities: (i) the \emph{Hopf linking saturation} angle
+$\Theta_{\mathrm{link}} = 2\pi W_g/(2W_g+1) \approx \pi$ rad, and (ii) the \emph{effective burst
+threshold} used in PDE and lattice simulations,
+$\theta_{\mathrm{crit}} = \pi(1+\kappa) \approx 5.8$ rad with $\kappa \approx 0.85$.
+Earlier drafts incorrectly identified $\Theta_{\mathrm{link}}$ with $5.8$; this revision corrects
+that typo and relates both thresholds to $S^3$ geometry, the Hopf fibration, and global pointer
+holonomy. The reset rule and quantized winding $W_g = 350/\pi$ are unchanged.
+\end{abstract}
+
+\section{Local Twist Density}
+
+The microscopic field is a unit quaternion $q(x,t) \in S^3$:
+\[
+q = w + ix + jy + kz, \qquad w^2+x^2+y^2+z^2 = 1.
+\]
+The local twist density (Hopf-angle variable) is
+\[
+\Theta(x,t) = 2\arccos(\operatorname{Re} q) = 2\arccos(w),
+\]
+measuring accumulated angular momentum in the two-gyro counter-rotating helicities.
+
+\section{Two Thresholds: Geometry vs.\ Simulation}
+
+\subsection{Antipodal fiber limit ($\Theta = \pi$)}
+
+On the Hopf fiber $S^1$, the antipodal point occurs when $w = \cos(\Theta/2) = 0$, hence
+\[
+\Theta_{\mathrm{antipodal}} = \pi \approx 3.1416~\mathrm{rad} \approx 180^\circ.
+\]
+This is the bare half-turn limit on a single fiber.
+
+\subsection{Hopf linking saturation ($\Theta_{\mathrm{link}}$)}
+
+For a map $q : T^3 \to S^3$, the Hopf invariant (linking number of preimages) is protected when
+local twist does not violate quantized linking. With locked winding $W_g = 350/\pi \approx 111.408$,
+stability requires
+\begin{equation}
+\boxed{\;
+\Theta_{\mathrm{link}} = \frac{2\pi W_g}{2W_g + 1}
+\;}
+\label{eq:link}
+\end{equation}
+Numerically, $\Theta_{\mathrm{link}} \approx 3.128~\mathrm{rad}$, coinciding with
+$\Theta_{\mathrm{antipodal}}$ to $<0.5\%$. \textbf{This is not $5.8$ rad.}
+Equation~\eqref{eq:link} is the geometric linking bound; it saturates near $\pi$.
+
+\subsection{Effective burst threshold ($\theta_{\mathrm{crit}}$)}
+
+The global pointer holonomy $\alpha = -\kappa\bar{\Theta}$ with $\kappa \approx 0.85$ and the
+Clifford-torus projection lift the \emph{operational} burst threshold above the bare fiber limit.
+Continuum and lattice codes implement
+\begin{equation}
+\boxed{\;
+\theta_{\mathrm{crit}} = \pi(1 + \kappa) \approx 5.812~\mathrm{rad} \approx 333^\circ
+\;}
+\label{eq:burst}
+\end{equation}
+With $\kappa = 0.85$, $\theta_{\mathrm{crit}} \approx 5.81$, matching the simulation default
+$\theta_{\mathrm{crit}} \approx 5.8$ in \texttt{pde\_relaxation.py} and lattice demos.
+Physically: the soliton tolerates twist up to $\pi$ on the fiber, plus a holonomy-lifted margin
+$\kappa\pi$ before the 4th-order Skyrme term can no longer stabilize against drive $\Delta\omega$.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|l|l|l|}
+\hline
+Symbol & Formula & Value (rad) & Role \\
+\hline
+$\Theta_{\mathrm{antipodal}}$ & $\pi$ & 3.142 & Bare $S^1$ fiber half-turn \\
+$\Theta_{\mathrm{link}}$ & $2\pi W_g/(2W_g+1)$ & 3.128 & Hopf linking saturation \\
+$\theta_{\mathrm{crit}}$ & $\pi(1+\kappa)$ & 5.812 & PDE/lattice burst sink \\
+\hline
+\end{tabular}
+\caption{Reconciled burst thresholds with $W_g=350/\pi$, $\kappa=0.85$.}
+\end{table}
+
+\section{Burst Reset Rule}
+
+When $\Theta_i > \theta_{\mathrm{crit}}$, the discrete rule resets
+\[
+q_i \leftarrow \mathrm{normalize}\bigl(0.3\,[1,0,0,0] + 0.7\,q_i\bigr),
+\qquad
+\Theta_i \leftarrow 0.15\,\Theta_i.
+\]
+The factor $0.3$ pulls the real part toward identity; $0.15$ ensures post-burst twist lies below
+$\theta_{\mathrm{crit}}$ while conserving Hopf charge modulo $W_g$. In continuum form,
+\[
+U'(\Theta) = -B(\Theta) = -C(\Theta - \theta_{\mathrm{crit}})_+^p, \qquad C \gg 1,\; p>1.
+\]
+
+\section{Relation to Topological Invariants}
+
+Each burst sheds flux $\Delta\Phi \propto \Delta\omega / W_g$. The global winding
+$W_g = 350/\pi$ keeps total topological charge integer (or half-integer for fermions).
+Post-burst reset returns sites to the low-twist attractor while pointer $\alpha$ recenters the
+lattice, preserving braiding-phase cluster $\phi_b \in [0.765,\,0.823]$.
+
+\section{Observer Synchronization}
+
+Embedded detectors rotate with the global pointer; observable burst strength is damped:
+\[
+\langle \mathrm{burst\ strength} \rangle \approx \frac{1}{\kappa\,\Delta t_{\mathrm{burst}}} \ll 1.
+\]
+
+\section{Summary}
+
+\begin{itemize}
+\item $\Theta_{\mathrm{link}} = 2\pi W_g/(2W_g+1) \approx \pi$: Hopf linking / antipodal geometry.
+\item $\theta_{\mathrm{crit}} = \pi(1+\kappa) \approx 5.8$: effective simulation threshold.
+\item Prior conflation of these two values was a notational error ($\approx 5.8$ attached to
+      Eq.~\eqref{eq:link}); corrected in this revision.
+\item Reset rule, $W_g = 350/\pi$, and observer synchronization are unchanged.
+\end{itemize}
+
+\end{document}

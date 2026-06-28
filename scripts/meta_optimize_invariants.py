@@ -8,7 +8,6 @@ from pathlib import Path
 
 import numpy as np
 import optuna
-import ray
 import torch
 
 project_root = Path(__file__).resolve().parent.parent
@@ -101,6 +100,8 @@ if __name__ == "__main__":
     print("🚀 Starting Meta-Optimizer for Emergent Constants (Wg, κ, braiding_phase)")
 
     if args.use_ray:
+        import ray
+
         ray.init(address="auto", ignore_reinit_error=True)
         print(f"   Ray cluster ready — {len(ray.nodes())} nodes")
 
@@ -124,4 +125,6 @@ if __name__ == "__main__":
         print("📈 Good convergence — continue increasing trials or widen ranges if needed.")
 
     if args.use_ray:
+        import ray
+
         ray.shutdown()

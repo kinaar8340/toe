@@ -43,3 +43,8 @@ venv/
 ENV/
 .env
 outputs/
+
+# LaTeX build artifacts
+papers/*.aux
+papers/*.log
+papers/*.out

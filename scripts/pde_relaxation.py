@@ -32,7 +32,7 @@ def simulate_twist_pde(
     D: float = 0.05,
     kappa: float = 0.85,
     delta_omega: float = 0.002,
-    theta_crit: float = 5.8,
+    theta_crit: float = 5.8,  # π(1+κ), κ≈0.85 — see papers/GW_Burst_Threshold.pdf
     save_plot: bool = True,
 ):
     """
