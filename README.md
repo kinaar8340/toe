@@ -144,6 +144,34 @@ Mean active_cubes : 12.01  (stability islands observed)
 ![Banner](outputs/pde_relaxation/twist_pde_relaxation.png)
 ![Banner](outputs/plots/top10_stability_table.png)
 
+## Related: Mystery φ-e-π Residual Probes
+
+The companion [mystery](https://github.com/kinaar8340/mystery) repo quantifies the near-Pythagorean residual R = φ² + e² − π² ≈ +0.137486 and its dynamical analogs (golden-angle packing ≈ 0.1375; exponential survival e⁻² ≈ 0.1353 at λt = 2).
+
+**Dual-role κ** (see [mystery RESULTS.md](https://github.com/kinaar8340/mystery/blob/main/docs/RESULTS.md)):
+
+| Symbol | Value | Role |
+|--------|-------|------|
+| **κ_doc** | 0.85 | Documentation / theory (θ_crit, B(κ), Hopf framing) |
+| **κ_sim** | ≈ 0.89 | Simulation / production (meta-opt, survival @ λt=2) |
+| **κ\*** | ≈ 0.8513 | Exact null e/π − R/π² |
+
+Production meta-opt uses κ_sim; documented formulas retain κ_doc.
+
+**TOE integration:**
+
+| File | Purpose |
+|------|---------|
+| `src/relaxation_survival.py` | λt normalization utilities; PDE + gauged-twist survival probes |
+| `src/conduit.py` → `RubikConeConduit.run_survival_probe()` | Conduit invariants at normalized λt = 2 |
+| `scripts/pde_relaxation.py --normalize-to-lambda-t 2` | PDE survival benchmark |
+| `scripts/epoch_bake_sweep.py --topology-grid` | Topology κ bake grid; braid_feedback_gain default 0.002 |
+| `scripts/magic_island_sweep.py --topology-grid` | Magic-island braid-gain × topology grid |
+
+Run from mystery: `python scripts/exponential_survival_probe.py` (imports toe modules).
+
+---
+
 ## Citation
 ```bibtex
 @misc{kinder2026aarontoe,
