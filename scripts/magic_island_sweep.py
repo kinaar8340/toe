@@ -10,15 +10,14 @@ Now supports --use-ray flag
 import argparse
 import gc
 import json
+import math
 import os
 import sys
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
-import ray
 import torch
 import torch.nn.functional as F
 from torch.amp import GradScaler, autocast
@@ -32,6 +31,48 @@ from src.config import load_config
 
 cfg = load_config("configs/default.yaml")
 public_facts_file = Path("facts/public_facts.json")
+
+E = math.e
+PI = math.pi
+PHI = (1 + math.sqrt(5)) / 2
+R_RESIDUAL = PHI**2 + E**2 - PI**2
+KAPPA_DOC = 0.85
+KAPPA_STAR = E / PI - R_RESIDUAL / PI**2
+KAPPA_SIM = 0.89
+
+# Noble-gas / magic-island presets (pseudo_Z = num_polarities + 2*max_facts approx Z)
+ISLAND_PRESETS: dict[int, dict] = {
+    18: {
+        "island_z": 18,
+        "element": "Ar",
+        "num_layers": 3,
+        "num_polarities": 12,
+        "max_facts": 30,
+        "pseudo_z": 72,
+        "gauge_strength": 0.88,
+        "omega_R": 0.0225,
+    },
+    54: {
+        "island_z": 54,
+        "element": "Xe",
+        "num_layers": 3,
+        "num_polarities": 18,
+        "max_facts": 36,
+        "pseudo_z": 90,
+        "gauge_strength": 0.88,
+        "omega_R": 0.0225,
+    },
+    129: {
+        "island_z": 129,
+        "element": "magic",
+        "num_layers": 4,
+        "num_polarities": 9,
+        "max_facts": 60,
+        "pseudo_z": 129,
+        "gauge_strength": 0.85,
+        "omega_R": 0.0225,
+    },
+}
 
 
 # ==================== QUATERNION HELPERS ====================
@@ -80,8 +121,7 @@ def calculate_gpu_demand(params: dict) -> tuple[float, str, int]:
 
 
 # ==================== TRIAL FUNCTION ====================
-@ray.remote(num_cpus=8, num_gpus=0, max_retries=2, scheduling_strategy="SPREAD")
-def run_magic_trial(trial_id: int, params: dict):
+def run_magic_trial_core(trial_id: int, params: dict) -> dict:
     gpu_fraction = params.get("gpu_fraction", 0.0)
     gpu_tier = params.get("gpu_tier", "CPU_ONLY")
     use_gpu = gpu_fraction > 0.0
@@ -101,15 +141,26 @@ def run_magic_trial(trial_id: int, params: dict):
         scaler = GradScaler(device="cuda")
         print(" → Modern AMP + GradScaler enabled")
 
+    kappa_seed = float(params.get("kappa_seed", KAPPA_DOC))
+    wg_base = float(params.get("wg_base", 350.0))
+    braiding_target = float(params.get("braiding_target", 0.8145))
+    braid_feedback_gain = float(params.get("braid_feedback_gain", 0.002))
+    steps_per_fact = int(params.get("steps_per_fact", 100))
+
     conduit = RubikConeConduit(
         embed_dim=cfg.model.embed_dim,
         twist_rate=cfg.model.twist_rate,
         max_depth=cfg.model.max_depth,
-        num_polarizations=cfg.model.num_polarizations,
-        quat_logical_dim=cfg.model.quat_logical_dim,
-        toroidal_modulo9=True,
-        vortex_math_369=True,
-        clifford_projection=True,
+        num_polarizations=params.get("num_polarities", cfg.model.num_polarizations),
+        quat_logical_dim=getattr(cfg.model, "quat_logical_dim", 96),
+        toroidal_modulo9=bool(params.get("toroidal_modulo9", True)),
+        vortex_math_369=bool(params.get("vortex_math_369", True)),
+        clifford_projection=bool(params.get("clifford_projection", True)),
+        gauge_strength=params["gauge_strength"],
+        omega_R=params["omega_R"],
+        wg_base=wg_base,
+        kappa=kappa_seed,
+        braiding_target=braiding_target,
     ).to(device)
 
     ring_cone = conduit.ring_cone
@@ -155,7 +206,7 @@ def run_magic_trial(trial_id: int, params: dict):
         cube_local_idx = idx % ring_cone.rings[ring_idx].num_cubes
         ring_cone.bake_ring(ring_idx, cube_local_idx, emb, orientation=idx % 24)
 
-        for _step in range(100):
+        for _step in range(steps_per_fact):
             item = {
                 "emb": emb.unsqueeze(0),
                 "s": torch.tensor([4.5 + idx * 4.8], device=device),
@@ -241,11 +292,19 @@ def run_magic_trial(trial_id: int, params: dict):
             if twist > 5.8:
                 burst_count += 1
 
+            if params.get("adaptive_kappa", True) and (idx + 1) % 5 == 0:
+                mid = conduit.monitor_topological_winding(n_samples=64)
+                braiding = float(mid.get("braiding_phase", 0.0))
+                braid_err = braiding - braiding_target
+                conduit.kappa = float(
+                    np.clip(conduit.kappa + braid_feedback_gain * braid_err, 0.70, 0.95)
+                )
+
     if use_gpu:
         torch.cuda.empty_cache()
 
     stats = conduit.monitor_topological_winding(n_samples=512)
-    bursts_per_step = burst_count / (params["max_facts"] * 100 + 1e-8)
+    bursts_per_step = burst_count / (params["max_facts"] * steps_per_fact + 1e-8)
     mean_id = np.mean(id_history) if id_history else 1.0
     twist_var = np.var(twist_history) if twist_history else 0.0
     pointer_var = np.var(pointer_history) if pointer_history else 0.0
@@ -257,16 +316,43 @@ def run_magic_trial(trial_id: int, params: dict):
             f"🌟 HIGH STABILITY CANDIDATE! Score={stability_score:.3f} | pseudo_Z≈{params['pseudo_z']} | Tier={gpu_tier}"
         )
 
+    kappa_final = float(conduit.kappa)
+    geo_w = float(stats.get("geometric_winding", 0.0))
+    w_g_target = wg_base / PI
+    braiding = float(stats.get("braiding_phase", 0.0))
+    hopf_delta = abs(geo_w - w_g_target)
+    braiding_delta = abs(braiding - braiding_target)
+    vortex369 = bool(params.get("vortex_math_369", True))
+    knot_phase = float(stats.get("knot_phase", 0.0)) if vortex369 else 0.0
+    eff_w = float(stats.get("effective_winding", 0.0))
+    gap_stress = hopf_delta / max(w_g_target, 1e-6) + braiding_delta * 0.05 + abs(eff_w) * 0.001
+    kappa_proxy = float(np.clip(E / PI - gap_stress / PI + knot_phase * 0.01, 0.70, 0.95))
+
     return {
         "trial_id": trial_id,
+        "label": params.get("label", f"trial_{trial_id}"),
+        "island_z": params.get("island_z"),
         "pseudo_Z": params["pseudo_z"],
         "num_layers": params["num_layers"],
         "num_polarities": params["num_polarities"],
         "max_facts": params["max_facts"],
         "gauge_strength": gauge_strength,
         "omega_R": omega_R,
-        "braiding_phase": float(stats.get("braiding_phase", 0.0)),
+        "topology": {
+            "toroidal_modulo9": bool(params.get("toroidal_modulo9", True)),
+            "vortex_math_369": vortex369,
+        },
+        "kappa_seed": kappa_seed,
+        "kappa_final": kappa_final,
+        "kappa_drift": kappa_final - kappa_seed,
+        "kappa_proxy": kappa_proxy,
+        "braid_feedback_gain": braid_feedback_gain,
+        "braiding_phase": braiding,
+        "braiding_delta": braiding_delta,
+        "hopf_delta": hopf_delta,
+        "w_g_measured": geo_w,
         "active_cubes": int(stats.get("active_cubes", 0)),
+        "vortex_sync_global": float(stats.get("vortex_sync_global", 0.0)),
         "stability_score": float(stability_score),
         "bursts_per_step": float(bursts_per_step),
         "mean_id_preservation": float(mean_id),
@@ -275,8 +361,112 @@ def run_magic_trial(trial_id: int, params: dict):
         "use_gauged_hopf": use_gauged,
         "gpu_tier": gpu_tier,
         "gpu_fraction": gpu_fraction,
-        "timestamp": datetime.now().isoformat(),
+        "delta_vs_kappa_doc": abs(kappa_final - KAPPA_DOC),
+        "delta_vs_kappa_star": abs(kappa_final - KAPPA_STAR),
+        "delta_vs_kappa_sim": abs(kappa_final - KAPPA_SIM),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+def _ray_remote_trial():
+    import ray
+
+    @ray.remote(num_cpus=8, num_gpus=0, max_retries=2, scheduling_strategy="SPREAD")
+    def run_magic_trial(trial_id: int, params: dict):
+        return run_magic_trial_core(trial_id, params)
+
+    return run_magic_trial
+
+
+def island_topology_grid_params(
+    island_z: int = 129,
+    quick: bool = True,
+    braid_gains: list[float] | None = None,
+) -> list[dict]:
+    """2×2 topology × braid-gain grid at fixed island preset."""
+    preset = dict(ISLAND_PRESETS[island_z])
+    if quick:
+        preset["max_facts"] = max(12, preset["max_facts"] // 5)
+        preset["steps_per_fact"] = 20
+    else:
+        preset["steps_per_fact"] = 100
+    gains = braid_gains or [0.002]
+    combos = [
+        ("baseline", False, False),
+        ("toroidal_only", True, False),
+        ("vortex369_only", False, True),
+        ("full_topology", True, True),
+    ]
+    grid = []
+    for gain in gains:
+        for label, toroidal, vortex369 in combos:
+            grid.append(
+                {
+                    **preset,
+                    "label": f"{label}_z{island_z}_bg{gain:g}",
+                    "toroidal_modulo9": toroidal,
+                    "vortex_math_369": vortex369,
+                    "kappa_seed": KAPPA_DOC,
+                    "wg_base": 350.0,
+                    "braiding_target": 0.8145,
+                    "braid_feedback_gain": gain,
+                    "adaptive_kappa": True,
+                    "use_gauged_hopf": True,
+                    "cooperative_sheaf": True,
+                    "lr": 1e-4,
+                    "recon_weight": 20000,
+                    "gpu_fraction": 0.0,
+                    "gpu_tier": "CPU_ONLY",
+                    "cpu_req": 8,
+                }
+            )
+    return grid
+
+
+def run_island_topology_grid(
+    island_z: int = 129,
+    quick: bool = True,
+    braid_gains: list[float] | None = None,
+) -> dict:
+    param_grid = island_topology_grid_params(island_z, quick=quick, braid_gains=braid_gains)
+    results = [run_magic_trial_core(i, p) for i, p in enumerate(param_grid)]
+    comparison = [
+        {
+            "label": r["label"],
+            "island_z": r.get("island_z"),
+            "toroidal_modulo9": r["topology"]["toroidal_modulo9"],
+            "vortex_math_369": r["topology"]["vortex_math_369"],
+            "braid_feedback_gain": r["braid_feedback_gain"],
+            "kappa_final": r["kappa_final"],
+            "kappa_drift": r["kappa_drift"],
+            "kappa_proxy": r["kappa_proxy"],
+            "stability_score": r["stability_score"],
+            "hopf_delta": r["hopf_delta"],
+        }
+        for r in results
+    ]
+    return {
+        "references": {
+            "kappa_doc": KAPPA_DOC,
+            "kappa_star": KAPPA_STAR,
+            "kappa_sim": KAPPA_SIM,
+        },
+        "island_z": island_z,
+        "quick": quick,
+        "braid_gains": braid_gains or [0.002],
+        "n_runs": len(results),
+        "runs": results,
+        "comparison_table": comparison,
+    }
+
+
+def save_island_grid_json(summary: dict) -> Path:
+    out = Path("outputs") / "magic_island"
+    out.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    path = out / f"island_topology_grid_z{summary['island_z']}_{stamp}.json"
+    path.write_text(json.dumps(summary, indent=2, default=str))
+    return path
 
 
 # ==================== LAUNCH ====================
@@ -288,7 +478,37 @@ if __name__ == "__main__":
         action="store_true",
         help="Use Ray for distributed/multi-node execution (default: single-node sequential)",
     )
+    parser.add_argument(
+        "--topology-grid",
+        action="store_true",
+        help="Run 2×2 topology grid at island preset (see --island-z)",
+    )
+    parser.add_argument("--island-z", type=int, default=129, choices=sorted(ISLAND_PRESETS))
+    parser.add_argument("--quick", action="store_true", help="Reduced facts/steps for grid mode")
+    parser.add_argument(
+        "--braid-gains",
+        type=float,
+        nargs="+",
+        default=None,
+        help="Braid feedback gains (topology grid)",
+    )
     args = parser.parse_args()
+
+    if args.topology_grid:
+        gains = args.braid_gains or [0.002, 0.005, 0.01]
+        print(f"=== Island topology κ grid Z={args.island_z} gains={gains} quick={args.quick} ===")
+        summary = run_island_topology_grid(
+            island_z=args.island_z, quick=args.quick, braid_gains=gains
+        )
+        path = save_island_grid_json(summary)
+        for row in summary["comparison_table"]:
+            print(
+                f"  {row['label']:<28} κ→{row['kappa_final']:.3f} "
+                f"drift={row['kappa_drift']:+.4f} proxy={row['kappa_proxy']:.3f} "
+                f"stab={row['stability_score']:.2f}"
+            )
+        print(f"JSON: {path}")
+        raise SystemExit(0)
 
     # ==================== PARAM GRID ====================
     param_grid = []
@@ -341,6 +561,9 @@ if __name__ == "__main__":
 
     if args.use_ray:
         try:
+            import ray
+
+            run_magic_trial = _ray_remote_trial()
             ray.init(address="auto", ignore_reinit_error=True)
             print(f"   🌟 Ray initialized — {len(ray.nodes())} nodes available")
 
@@ -354,19 +577,19 @@ if __name__ == "__main__":
             ray.shutdown()
         except Exception as e:
             print(f"   Ray failed ({e}) — falling back to single-node")
-            results = [run_magic_trial(i, p) for i, p in enumerate(param_grid)]
+            results = [run_magic_trial_core(i, p) for i, p in enumerate(param_grid)]
     else:
         print("   🔄 Running sequentially (single-node mode)")
-        results = [run_magic_trial(i, p) for i, p in enumerate(param_grid)]
+        results = [run_magic_trial_core(i, p) for i, p in enumerate(param_grid)]
 
         # ==================== Reporting + top-30 ====================
+        import pandas as pd
+
         Path("outputs").mkdir(exist_ok=True)
         report_path = Path(f"outputs/magic_island_report_{datetime.now():%Y%m%d_%H%M%S}.md")
         df = pd.DataFrame(results)
         df.to_markdown(report_path, index=False)
         print(f"✅ Full report saved → {report_path}")
         print("\n🏆 Top 30 Stability Candidates:")
-        print(
-            df.sort_values("stability_score", ascending=False).head(30)[...].to_string(index=False)
-        )
+        print(df.sort_values("stability_score", ascending=False).head(30).to_string(index=False))
         print("→ Sweep complete.")
