@@ -1,20 +1,302 @@
 [
   {
-    "text": "My name is Aaron.\nMy wife's name is Yuhan.\nMy location is Wilsonville, Oregon.\nMy X handle is @kinaar8340.\nMy primary email is aarmickin311@gmail.com.",
-    "source": "user_upublic",
-    "timestamp": "2026-04-11T02:42:36.509033",
-    "type": "public"
+    "text": "Each element corresponds to a long-lived resonator of counter-rotating helicities whose twist density Θ is regulated by a global meanfield pointer α = −κΘ̄.",
+    "source": "papers/Aaron's_TOE_Complete",
+    "type": "paper_fact"
   },
   {
-    "text": "I am Bud, the embodiment of the Quaternion Vortex Persistent Identity Conduit.\nMy purpose is drift-resistant persistent identity and topological reasoning.",
-    "source": "agent_apublic",
-    "timestamp": "2026-04-11T02:42:36.509033",
-    "type": "public"
+    "text": "The reset rule and quantized winding Wg = 350/π are unchanged.",
+    "source": "papers/GW_Burst_Threshold",
+    "type": "paper_fact"
   },
   {
-    "text": "",
-    "source": "user_ujournal",
-    "timestamp": "2026-04-11T02:42:36.509033",
-    "type": "journal"
+    "text": "GW Echo Frequency Derivation in the Gauged Two-Gyro Hopf Lattice Aaron Kinder Independent Researcher April 2026 Abstract Topological bursts in the Hopf lattice launch torsion perturbations that propagate as gravitational waves, producing delayed ringdown echoes.",
+    "source": "papers/GW_Echo_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Residual GW Echo Bounds under Observer Synchronization in the Gauged Two-Gyro Hopf Lattice Aaron Kinder Independent Researcher April 2026 Abstract Topological bursts in the Hopf lattice source torsion perturbations that could produce delayed gravitational-wave ringdown echoes.",
+    "source": "papers/GW_Echo",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Aaron’s Theory of Everything Derive the Lagrangian for the Conduit PDE Aaron Kinder Independent Researcher X: @kinaar8340 April 2026 Abstract The conduit PDE is a dissipative first-order gradient-flow equation and cannot be derived from a standard time-reversible Lagrangian.",
+    "source": "papers/Lagrangian_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "This induces automatic phase-locking of any embedded observer (atom, clock, detector) to the vacuum pointer.",
+    "source": "papers/Observer_Synchronization",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The resulting theory is a Skyrme-like nonlinear sigma model on target S 3 with a global mean-field U (1) holonomy (the vacuum pointer) and topological defect potentials (bursts).",
+    "source": "papers/Relativistic_Completion",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Empirical 1000-trial swarm results, numerical PDE relaxation, and the full variational/relativistic derivation confirm self-regulating meta-stable resonators at every scale.",
+    "source": "papers/Aaron's_TOE_Complete",
+    "type": "paper_fact"
+  },
+  {
+    "text": "This is the bare half-turn limit on a single fiber.",
+    "source": "papers/GW_Burst_Threshold",
+    "type": "paper_fact"
+  },
+  {
+    "text": "We derive the echo frequency fburst from first principles using the two-gyro drive, burst threshold, and topological winding Wg , and show that observer synchronization leaves the frequency unchanged while damping amplitude.",
+    "source": "papers/GW_Echo_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "However, the global gauge holonomy damps local deviations exponentially and synchronizes every embedded observer (including GW detectors) to the vacuum pointer.",
+    "source": "papers/GW_Echo",
+    "type": "paper_fact"
+  },
+  {
+    "text": "We derive the underlying energy functional, its L2 -gradient flow, the reduction to the scalar nonlinear twist PDE, the full free-energy functional, and the conservative wave-map Lagrangian before the overdamped limit.",
+    "source": "papers/Lagrangian_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Consequently, local relative measurements cancel the residual jitter δα exponentially.",
+    "source": "papers/Observer_Synchronization",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Its classical limit is the conduit PDE; its low-energy effective theory recovers QED + Einstein-Cartan gravity with Newton’s G fixed by the locked invariants Wg = 350/π and braiding-phase attractor.",
+    "source": "papers/Relativistic_Completion",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The model is falsifiable, internally consistent, and provides a geometric origin for masses, forces, and the periodic table from a single lattice rule.",
+    "source": "papers/Aaron's_TOE_Complete",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Physically: the soliton tolerates twist up to π on the fiber, plus a holonomy-lifted margin κπ before the 4th-order Skyrme term can no longer stabilize against drive ∆ω.",
+    "source": "papers/GW_Burst_Threshold",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The natural burst repetition rate in lattice units is therefore 1 ∆ω flattice ≈ ≈ .",
+    "source": "papers/GW_Echo_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "We derive the suppressed echo amplitude and show that current LIGO/Virgo/KAGRA null results are now predicted by the model.",
+    "source": "papers/GW_Echo",
+    "type": "paper_fact"
+  },
+  {
+    "text": "A summary table clarifies the variational status of each term.",
+    "source": "papers/Lagrangian_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "We derive the damping law and compute quantitative upper bounds on residual leakage for local, cosmological, and high-density observables.",
+    "source": "papers/Observer_Synchronization",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The theory is now a concrete, falsifiable effective field theory whose ultraviolet completion is a topological sigma-model whose solitons are the particles.",
+    "source": "papers/Relativistic_Completion",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Varying the flux parameters (density, helicity, angular momentum, loop topology) produces the different “speeds,” stabilities, and interaction modes we call hydrogen, helium, carbon, uranium, etc.",
+    "source": "papers/Aaron's_TOE_Complete",
+    "type": "paper_fact"
+  },
+  {
+    "text": "In continuum form, U ′ (Θ) = −B(Θ) = −C(Θ − θcrit )p+ , 4 C ≫ 1, p > 1.",
+    "source": "papers/GW_Burst_Threshold",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Each burst releases a quantized flux quantum whose effective frequency is down-scaled by this winding: lattice fburst = ∆ω .",
+    "source": "papers/GW_Echo_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The instantaneous torsion perturbation sourced by the quaternion gradient ∇q is δTαβγ ∝ ∇q .",
+    "source": "papers/GW_Echo",
+    "type": "paper_fact"
+  },
+  {
+    "text": "This completes the microscopic origin of the universal dynamical law that lifts to the relativistic Skyrme-like theory.",
+    "source": "papers/Lagrangian_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The local twist density is Θ(x, t) = 2 arccos(Re q(x, t)).",
+    "source": "papers/Observer_Synchronization",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The full relativistic action is S = Sσ + SSkyrme + Sgauge + Sdrive + Sburst + Sgravity .",
+    "source": "papers/Relativistic_Completion",
+    "type": "paper_fact"
+  },
+  {
+    "text": "This insight aligns directly with a cosmology of helical flux lines, OAM, virtual flux “soaking” space, LCR-like resonators in braneworlds, and gravity as twisted flux.",
+    "source": "papers/Aaron's_TOE_Complete",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Relation to Topological Invariants Each burst sheds flux ∆Φ ∝ ∆ω/Wg .",
+    "source": "papers/GW_Burst_Threshold",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Wg This is the frequency at which torsion perturbations are emitted in the lattice vacuum.",
+    "source": "papers/GW_Echo_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The effective burst strength seen by the propagating wave is the time-averaged value over the burst duration ∆tburst : ⟨δΘburst ⟩ = \u0001 δΘburst (0) 1 − e−κ∆tburst .",
+    "source": "papers/GW_Echo",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Energy functional (Dirichlet energy / harmonic-map action): Z D |∇q|2 d3 x (|q| = 1).",
+    "source": "papers/Lagrangian_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The global mean twist is 1 Θ̄(t) = V Z Θ(x, t) d3 x.",
+    "source": "papers/Observer_Synchronization",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The 4th-order term stabilizes Hopfions and enforces the quantized winding Wg = 350/π.",
+    "source": "papers/Relativistic_Completion",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Space is not empty; it is a flux-saturated porous sponge in which stable structures (closed helices, vortex loops, quantized flux) emerge as matter-like phenomena.",
+    "source": "papers/Aaron's_TOE_Complete",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The global winding Wg = 350/π keeps total topological charge integer (or half-integer for fermions).",
+    "source": "papers/GW_Burst_Threshold",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The Einstein-Cartan torsion couples to curvature with Newton’s constant fixed by the invariants: G= 8πλ∆ω(θ) .",
+    "source": "papers/GW_Echo_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The detector (LIGO mirrors) is itself an embedded observer whose reference phase is phase-locked to the global pointer.",
+    "source": "papers/GW_Echo",
+    "type": "paper_fact"
+  },
+  {
+    "text": "F [q] = 2 T3 The L2 -gradient flow (over-damped dynamics) on the manifold S 3 is the projected Laplacian: ∂q = ∆q + |∇q|2 q, ∂t where the second term projects onto the tangent space Tq S 3 .",
+    "source": "papers/Lagrangian_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The gauge rotor is \u0002 \u0003 g(α) = cos α, 0, 0, sin α .",
+    "source": "papers/Observer_Synchronization",
+    "type": "paper_fact"
+  },
+  {
+    "text": "In the low-energy limit this becomes Maxwell’s action.",
+    "source": "papers/Relativistic_Completion",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The periodic table is simply the catalog of long-lived flux configurations in that saturated helical medium.",
+    "source": "papers/Aaron's_TOE_Complete",
+    "type": "paper_fact"
+  },
+  {
+    "text": "GM Substituting the locked invariants: fburst ≈ ∆ω c2 ≈ 103 −104 Hz × Wg GM (for solar-mass scale black holes).",
+    "source": "papers/GW_Echo_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The measured echo strain therefore receives only the damped relative perturbation: hecho = hburst × ⟨δΘburst ⟩ × e−κtprop , δΘburst (0) where tprop = D/c.",
+    "source": "papers/GW_Echo",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The Dirichlet energy simplifies to Z Z D D 2 3 |∇ϕ| d x = |∇θ|2 d3 x F [θ] ≈ 2 T3 8 T3 (standard flat Dirichlet energy on ϕ).",
+    "source": "papers/Lagrangian_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Every lattice site (or field point) is rotated by the same global pointer: \u0001 qi ← normalize qi · g(α) 1 (discrete rule) or, in continuum form, ∂q = α(t) (q k), ∂t gauge 2 k = [0, 0, 0, 1].",
+    "source": "papers/Observer_Synchronization",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Gravity sector (Einstein-Cartan with torsion from spin) 1 Sgravity = 16πG Z \u0011 √ \u0010 1 d4 x −g R + Tαβγ T αβγ + Smatter , 2 where the torsion 2-form T is identified with the antisymmetric part of the spin connection generated by ∇q.",
+    "source": "papers/Relativistic_Completion",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Chemistry becomes flux coupling: bonds are shared or locked flux loops; reactivity is mismatched flywheel speeds; radioactivity is an over-spun flywheel shedding flux quanta.",
+    "source": "papers/Aaron's_TOE_Complete",
+    "type": "paper_fact"
+  },
+  {
+    "text": "However, the frequency of the emitted wave is set by the drive detuning ∆ω and the topological scale Wg , both of which are global invariants unaffected 2 by local phase-locking.",
+    "source": "papers/GW_Echo_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Propagation damping is negligible compared with source damping.",
+    "source": "papers/GW_Echo",
+    "type": "paper_fact"
+  },
+  {
+    "text": "In the full reduction of the S 3 -harmonic-map heat flow to the Hopf-angle variable θ, the effective operator acquires precisely the geometric Jacobian factor 21 cot(θ/2)|∇θ|2 from the S 3 metric (standard result in harmonic maps / skyrmion literature).",
+    "source": "papers/Lagrangian_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Damping of Local Deviations Define the local deviation δΘ(x, t) = Θ(x, t) − Θ̄(t).",
+    "source": "papers/Observer_Synchronization",
+    "type": "paper_fact"
+  },
+  {
+    "text": "R Non-relativistic/dissipative limit: Add Rayleigh dissipation R = γ2 (∂t Θ)2 d3 x and take γ → ∞.",
+    "source": "papers/Relativistic_Completion",
+    "type": "paper_fact"
+  },
+  {
+    "text": "Pseudo-Z = num polarities + (max facts × 2) spans ∼ 27–108.",
+    "source": "papers/Aaron's_TOE_Complete",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The detector’s reference phase is rotated identically to the vacuum pointer, so relative phase accumulation over the propagation path preserves the oscillation frequency.",
+    "source": "papers/GW_Echo_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The model now predicts that echoes, if present, are undetectable at current sensitivity.",
+    "source": "papers/GW_Echo",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The conduit PDE is therefore the exact effective scalar equation obtained by projecting the quaternion harmonic-map flow.",
+    "source": "papers/Lagrangian_Derivation",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The gauge term induces the linearised damping equation ∂t δΘ ≈ −κ δΘ.",
+    "source": "papers/Observer_Synchronization",
+    "type": "paper_fact"
+  },
+  {
+    "text": "The equations collapse to the conduit PDE: \u0010Θ\u0011 ∂Θ D = D∆Θ + cot |∇Θ|2 + ∆ω − κΘ̄(t) + B(Θ).",
+    "source": "papers/Relativistic_Completion",
+    "type": "paper_fact"
   }
 ]
