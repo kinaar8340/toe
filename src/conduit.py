@@ -77,9 +77,22 @@ def safe_cosine(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     return torch.nn.functional.cosine_similarity(a, b, dim=-1)
 
 
-# Golden-angle irrational rotation increment (phyllotaxis / Hopf S¹ packing)
-# Canonical definitions: flux_hopf_lib.constants / flux_hopf_lib.conduit
-from flux_hopf_lib.conduit import apply_golden_angle_increment
+# Shared core: golden-angle + gauge/κ mixins (flux_hopf_lib)
+from flux_hopf_lib.conduit import (
+    GaugePointerMixin,
+    GoldenAngleMixin,
+    apply_golden_angle_increment,
+)
+from flux_hopf_lib.constants import (
+    DEFAULT_GAUGE_STRENGTH,
+    DEFAULT_KAPPA,
+    DEFAULT_MAX_DEPTH,
+    DEFAULT_TWIST_RATE,
+    W_G_LOCK,
+)
+from flux_hopf_lib.constants import (
+    PHI as PHI_CONJ,
+)
 
 
 # ====================== CORE CLASSES ======================
@@ -215,14 +228,16 @@ class RingConeChain(nn.Module):
 # ──────────────────────────────────────────────────────────────────────
 # TwistedHelicalConduit (FULL core geometry — all methods restored)
 # ──────────────────────────────────────────────────────────────────────
-class TwistedHelicalConduit(nn.Module):
-    PHI = (1 + math.sqrt(5)) / 2
+class TwistedHelicalConduit(nn.Module, GoldenAngleMixin):
+    """Helical conduit geometry; golden-angle helpers from flux_hopf_lib mixins."""
+
+    PHI = PHI_CONJ
 
     def __init__(
         self,
         embed_dim: int = 384,
-        twist_rate: float = 12.5,
-        max_depth: float = 56.0,
+        twist_rate: float = DEFAULT_TWIST_RATE,
+        max_depth: float = DEFAULT_MAX_DEPTH,
         num_polarizations: int = 3,
         quat_logical_dim: int = 96,
         **kwargs,
@@ -233,7 +248,7 @@ class TwistedHelicalConduit(nn.Module):
         self.twist_rate = twist_rate
         self.max_depth = max_depth
         self.num_pol = num_polarizations
-        self.PHI = (1 + 5**0.5) / 2
+        self.PHI = PHI_CONJ
         self.quat_logical_dim = quat_logical_dim
 
         self.toroidal_modulo9: bool = kwargs.pop("toroidal_modulo9", False)
@@ -756,23 +771,25 @@ class TwistedHelicalConduit(nn.Module):
 # ──────────────────────────────────────────────────────────────────────
 # RubikConeConduit — v10.7 (clean, no hacks)
 # ──────────────────────────────────────────────────────────────────────
-class RubikConeConduit(TwistedHelicalConduit):
+class RubikConeConduit(TwistedHelicalConduit, GaugePointerMixin):
+    """Full Rubik-style conduit (toe-local). Gauge/κ via flux_hopf_lib.GaugePointerMixin."""
+
     VERSION = "10.8"
 
     def __init__(
         self,
         embed_dim: int = 384,
-        twist_rate: float = 12.5,
-        max_depth: float = 56.0,
+        twist_rate: float = DEFAULT_TWIST_RATE,
+        max_depth: float = DEFAULT_MAX_DEPTH,
         num_polarizations: int = 9,
         quat_logical_dim: int = 96,
         toroidal_modulo9: bool = True,
         vortex_math_369: bool = False,
         clifford_projection: bool = True,
-        gauge_strength: float = 0.88,
+        gauge_strength: float = DEFAULT_GAUGE_STRENGTH,
         omega_R: float = 0.0225,
         wg_base: float = 350.0,
-        kappa: float = 0.85,
+        kappa: float = DEFAULT_KAPPA,
         braiding_target: float = 0.8145,
         golden_angle_steps: bool = False,
         golden_angle_mode: str = "golden",
@@ -790,12 +807,13 @@ class RubikConeConduit(TwistedHelicalConduit):
             golden_angle_mode=golden_angle_mode,
         )
 
-        # Store all Rubik-specific attributes
+        # Store all Rubik-specific attributes (κ / gauge from core defaults)
         self.num_polarizations = num_polarizations
         self.gauge_strength = gauge_strength
         self.omega_R = omega_R
         self.wg_base = wg_base
         self.kappa = kappa
+        self.w_g_lock = W_G_LOCK
         self.braiding_target = braiding_target
 
         # RingConeChain (required for monitor_topological_winding and forward)
@@ -875,11 +893,11 @@ class RubikConeConduit(TwistedHelicalConduit):
 
     def effective_decay_rate(self) -> float:
         """Characteristic rate λ for gauge-restoring dynamics (≈ κ in mean-field reduction)."""
-        return float(self.kappa)
+        return self.characteristic_rate()  # GaugePointerMixin → κ
 
     def steps_for_lambda_t(self, lambda_t_target: float = 2.0, dt: float = 1.0) -> int:
         """Discrete steps to reach dimensionless time λt = lambda_t_target."""
-        return max(1, round(lambda_t_target / (self.effective_decay_rate() * dt)))
+        return self.steps_to_lambda_t(lambda_t_target, dt)
 
     @torch.no_grad()
     def run_survival_probe(
