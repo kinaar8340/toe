@@ -7,6 +7,13 @@ name = "toe"
 version = "1.0.0"
 description = "Aaron’s Theory of Everything — Flux Flywheels, Gauged Hopf Lattice"
 requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    # Shared core (λt survival, κ, Hopf/quaternion primitives)
+    # Local: pip install -e ../flux_hopf_lib
+    "flux-hopf-lib @ git+https://github.com/kinaar8340/flux_hopf_lib.git@main",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -20,6 +27,9 @@ test = [
     "ruff>=0.11.0",
     "pre-commit>=4.0.0",
     "hypothesis>=6.100.0"
+]
+torch = [
+    "torch>=2.0",
 ]
 
 [tool.ruff]
@@ -69,4 +79,8 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["torch.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["flux_hopf_lib.*"]
 ignore_missing_imports = true

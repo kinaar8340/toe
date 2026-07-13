@@ -13,12 +13,18 @@ Run with:
 Outputs saved to: ~/Projects/toe/outputs/pde_relaxation/
 """
 
+import argparse
+import sys
 from datetime import datetime
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
+
+# Allow importing relaxation_survival from src/
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from relaxation_survival import E_INV2, R_RESIDUAL, simulate_twist_pde_survival
 
 # === ROBUST OUTPUT DIRECTORY (always relative to project root) ===
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "outputs" / "pde_relaxation"
@@ -110,7 +116,52 @@ def simulate_twist_pde(
     return mean_history
 
 
+def run_normalized_survival(
+    normalize_to_lambda_t: float = 2.0,
+    kappa: float = 0.85,
+    dt: float = 0.001,
+    seed: int = 42,
+) -> dict:
+    """Run PDE to λt = normalize_to_lambda_t and report survival vs e^{-2} and R."""
+    result = simulate_twist_pde_survival(
+        normalize_to_lambda_t=normalize_to_lambda_t,
+        kappa=kappa,
+        dt=dt,
+        seed=seed,
+    )
+    norm = result["normalization"]
+    surv = result["survival"]
+    comp = result["analog_comparisons"]["mean_survival"]
+    print(f"\n=== Normalized survival (λt = {normalize_to_lambda_t}) ===")
+    print(f"   κ = {kappa}  →  λ ≈ κ  →  n_steps = {norm['n_steps']}  (dt = {dt})")
+    print(f"   mean_survival = {surv['mean_survival']:.6f}  (theory e^{{-2}} = {E_INV2:.6f})")
+    print(f"   R = φ²+e²-π² = {R_RESIDUAL:.6f}")
+    print(f"   Best analog: {comp['best_match']}  (Δ {comp['delta_pct_vs_best']:.2f}%)")
+    return result
+
+
 if __name__ == "__main__":
-    simulate_twist_pde()
-    print("\n🏆 PDE relaxation verified.")
-    print("   The conduit PDE relaxes to a stable low-twist domain as predicted.")
+    parser = argparse.ArgumentParser(description="Twist-field PDE relaxation on 3-torus")
+    parser.add_argument(
+        "--normalize-to-lambda-t",
+        type=float,
+        default=None,
+        metavar="LT",
+        help="Stop at dimensionless time λt = LT (e.g. 2 for e^{-2} survival benchmark)",
+    )
+    parser.add_argument("--kappa", type=float, default=0.85)
+    parser.add_argument("--dt", type=float, default=0.001)
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+
+    if args.normalize_to_lambda_t is not None:
+        run_normalized_survival(
+            normalize_to_lambda_t=args.normalize_to_lambda_t,
+            kappa=args.kappa,
+            dt=args.dt,
+            seed=args.seed,
+        )
+    else:
+        simulate_twist_pde()
+        print("\n🏆 PDE relaxation verified.")
+        print("   The conduit PDE relaxes to a stable low-twist domain as predicted.")

@@ -25,6 +25,8 @@ source venv/bin/activate
 ```
 3. Install Dependencies:
 ```bash
+# Shared core (editable if developing flux_hopf_lib alongside):
+#   pip install -e ../flux_hopf_lib
 pip install -r requirements.txt
 ```
 4. Run the Simulation:
@@ -162,13 +164,22 @@ Production meta-opt uses κ_sim; documented formulas retain κ_doc.
 
 | File | Purpose |
 |------|---------|
-| `src/relaxation_survival.py` | λt normalization utilities; PDE + gauged-twist survival probes |
+| **[flux_hopf_lib](https://github.com/kinaar8340/flux_hopf_lib)** | Canonical λt survival, κ, Hopf/quaternion primitives |
+| `src/relaxation_survival.py` | Thin re-export shim of `flux_hopf_lib.simulation` (backward-compatible) |
 | `src/conduit.py` → `RubikConeConduit.run_survival_probe()` | Conduit invariants at normalized λt = 2 |
 | `scripts/pde_relaxation.py --normalize-to-lambda-t 2` | PDE survival benchmark |
 | `scripts/epoch_bake_sweep.py --topology-grid` | Topology κ bake grid; braid_feedback_gain default 0.002 |
 | `scripts/magic_island_sweep.py --topology-grid` | Magic-island braid-gain × topology grid |
 
-Run from mystery: `python scripts/exponential_survival_probe.py` (imports toe modules).
+Prefer new code::
+
+```python
+from flux_hopf_lib.simulation import simulate_twist_pde_survival, compare_to_analogs
+# or legacy:
+from relaxation_survival import simulate_twist_pde_survival
+```
+
+Mystery probes use `flux_hopf_lib` directly; conduit-only scripts still load `toe/src/conduit.py`.
 
 ---
 

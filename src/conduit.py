@@ -77,6 +77,11 @@ def safe_cosine(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     return torch.nn.functional.cosine_similarity(a, b, dim=-1)
 
 
+# Golden-angle irrational rotation increment (phyllotaxis / Hopf S¹ packing)
+# Canonical definitions: flux_hopf_lib.constants / flux_hopf_lib.conduit
+from flux_hopf_lib.conduit import apply_golden_angle_increment
+
+
 # ====================== CORE CLASSES ======================
 class CubeChain:
     # ... (exactly as you had — unchanged)
@@ -234,6 +239,9 @@ class TwistedHelicalConduit(nn.Module):
         self.toroidal_modulo9: bool = kwargs.pop("toroidal_modulo9", False)
         self.vortex_math_369: bool = kwargs.pop("vortex_math_369", False)
         self.clifford_projection: bool = kwargs.pop("clifford_projection", False)
+        # Golden-angle irrational rotation steps on S¹ (phyllotaxis-style helix packing)
+        self.golden_angle_steps: bool = kwargs.pop("golden_angle_steps", False)
+        self.golden_angle_mode: str = kwargs.pop("golden_angle_mode", "golden")
 
         self.output_scale = nn.Parameter(torch.tensor(1.0, device=self.device))  # changed was 0.35
         self.residual_scale = nn.Parameter(torch.tensor(0.85, device=self.device))
@@ -374,7 +382,15 @@ class TwistedHelicalConduit(nn.Module):
         s_norm = s_t / self.max_depth
         s_float = float(s_t)
 
-        big_theta = 2 * math.pi * self.twist_rate * s_norm
+        golden_phase = 0.0
+        if self.golden_angle_steps:
+            _, golden_phase = apply_golden_angle_increment(
+                s_float,
+                max_depth=self.max_depth,
+                mode=self.golden_angle_mode,
+            )
+
+        big_theta = 2 * math.pi * self.twist_rate * s_norm + golden_phase
         R_big = 1.0
         Xc = R_big * torch.cos(big_theta)
         Yc = R_big * torch.sin(big_theta)
@@ -687,7 +703,15 @@ class TwistedHelicalConduit(nn.Module):
         s_norm = s_t / self.max_depth
         s_float = float(s)
 
-        big_theta = 2 * math.pi * self.twist_rate * s_norm
+        golden_phase = 0.0
+        if self.golden_angle_steps:
+            _, golden_phase = apply_golden_angle_increment(
+                s_float,
+                max_depth=self.max_depth,
+                mode=self.golden_angle_mode,
+            )
+
+        big_theta = 2 * math.pi * self.twist_rate * s_norm + golden_phase
         R_big = 1.0
         Xc = R_big * torch.cos(big_theta)
         Yc = -R_big * torch.sin(big_theta)
@@ -750,6 +774,8 @@ class RubikConeConduit(TwistedHelicalConduit):
         wg_base: float = 350.0,
         kappa: float = 0.85,
         braiding_target: float = 0.8145,
+        golden_angle_steps: bool = False,
+        golden_angle_mode: str = "golden",
     ):
         super().__init__(
             embed_dim=embed_dim,
@@ -760,6 +786,8 @@ class RubikConeConduit(TwistedHelicalConduit):
             toroidal_modulo9=toroidal_modulo9,
             vortex_math_369=vortex_math_369,
             clifford_projection=clifford_projection,
+            golden_angle_steps=golden_angle_steps,
+            golden_angle_mode=golden_angle_mode,
         )
 
         # Store all Rubik-specific attributes
@@ -775,6 +803,11 @@ class RubikConeConduit(TwistedHelicalConduit):
 
         self.current_epoch = 0
         self.epoch_sync_enabled = False
+
+        # Gauged two-gyro state (used by survival / epoch-sync probes)
+        self.omega_L = 0.025
+        self.current_quaternion = np.array([1.0, 0.0, 0.0, 0.0])
+        self.twist_history = np.array([0.0])
 
         print(f"→ RubikConeConduit v{self.VERSION} ready — ShellCube + ring_cone + epoch-sync")
 
@@ -839,6 +872,74 @@ class RubikConeConduit(TwistedHelicalConduit):
         ring_idx = idx % self.ring_cone.NUM_RINGS
         cube_idx = idx % self.ring_cone.rings[ring_idx].num_cubes
         self.ring_cone.bake_ring(ring_idx, cube_idx, emb)
+
+    def effective_decay_rate(self) -> float:
+        """Characteristic rate λ for gauge-restoring dynamics (≈ κ in mean-field reduction)."""
+        return float(self.kappa)
+
+    def steps_for_lambda_t(self, lambda_t_target: float = 2.0, dt: float = 1.0) -> int:
+        """Discrete steps to reach dimensionless time λt = lambda_t_target."""
+        return max(1, round(lambda_t_target / (self.effective_decay_rate() * dt)))
+
+    @torch.no_grad()
+    def run_survival_probe(
+        self,
+        normalize_to_lambda_t: float | None = 2.0,
+        dt: float = 0.001,
+        seed: int = 42,
+    ) -> dict:
+        """
+        Measure topological invariants and gauged-twist survival at λt = 2.
+
+        Compares identity / fluctuation residuals to e^{-2} and R = φ²+e²-π².
+        Canonical implementation: flux_hopf_lib.simulation (shimmed via
+        relaxation_survival for backward-compatible imports).
+        """
+        from relaxation_survival import (
+            E_INV2,
+            R_RESIDUAL,
+            compare_to_analogs,
+            evolve_gauged_twist_survival,
+        )
+
+        stats_before = self.monitor_topological_winding(n_samples=256)
+
+        twist_result = evolve_gauged_twist_survival(
+            n_steps=0,
+            kappa=self.kappa,
+            gauge_strength=self.gauge_strength,
+            omega_L=self.omega_L,
+            omega_R=self.omega_R,
+            seed=seed,
+            normalize_to_lambda_t=normalize_to_lambda_t,
+            dt=dt,
+        )
+
+        stats_after = self.monitor_topological_winding(n_samples=256)
+
+        wg_target = self.wg_base / math.pi
+        braiding_residual = abs(stats_after["braiding_phase"] - self.braiding_target)
+        wg_residual = abs(stats_after["geometric_winding"] - wg_target) / wg_target
+
+        return {
+            "normalize_to_lambda_t": normalize_to_lambda_t,
+            "kappa": self.kappa,
+            "lambda_t_achieved": twist_result["lambda_t_achieved"],
+            "n_steps": twist_result["n_steps"],
+            "theoretical_e_inv2": E_INV2,
+            "r_residual": R_RESIDUAL,
+            "invariants_before": stats_before,
+            "invariants_after": stats_after,
+            "braiding_residual": braiding_residual,
+            "wg_relative_residual": wg_residual,
+            "gauged_twist": twist_result,
+            "analog_comparisons": {
+                "braiding_residual": compare_to_analogs(braiding_residual, "braiding_residual"),
+                "identity_residual": twist_result["analog_comparison_residual"],
+                "identity_survival": twist_result["analog_comparison_survival"],
+                "twist_survival": twist_result["analog_comparison_twist_survival"],
+            },
+        }
 
 
 # VQC subclass (inherits all new topology for free)

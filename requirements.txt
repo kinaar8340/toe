@@ -3,6 +3,11 @@
 # Requirements file — production-ready + fully reproducible
 # =============================================================
 
+# Shared core — single source of truth for survival / κ / Hopf primitives
+# Local editable (recommended while developing the ecosystem):
+#   pip install -e ../flux_hopf_lib
+flux-hopf-lib @ git+https://github.com/kinaar8340/flux_hopf_lib.git@main
+
 # Core Runtime (always required)
 torch>=2.11.0                   # PyTorch 2.4+ (CPU or CUDA)
 numpy>=2.4.4
