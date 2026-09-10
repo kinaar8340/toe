@@ -1,6 +1,8 @@
-# TOE — Theory of Everything (RubikConeConduit v10.8)
+# toe
 
-**Flux Flywheels, Gauged Hopf Lattice, and Emergent Reality**
+Satellite behind the portal — a **Model**, not a peer product and not the theorem surface. Geometry and arithmetic stay on [qga](https://github.com/kinaar8340/qga).
+
+**Flux Flywheels, Gauged Hopf Lattice, and Emergent Reality** (RubikConeConduit v10.8)
 
 ![Tests](https://github.com/kinaar8340/toe/actions/workflows/ci.yml/badge.svg)
 ![Coverage](https://codecov.io/gh/kinaar8340/toe/branch/main/graph/badge.svg)
