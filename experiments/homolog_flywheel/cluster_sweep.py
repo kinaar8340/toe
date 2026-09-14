@@ -35,9 +35,10 @@ def fleet_remote_command(
 ) -> str:
     """Remote body for bin/fleet run. Shard index is hostname budN → N-2."""
     return (
+        "mkdir -p $HOME/Playground/data $HOME/Playground/results; "
         "host=$(hostname); i=${host#bud}; "
         "PYTHONPATH=$HOME/Projects/toe/src:$HOME/Projects/toe/experiments "
-        "python -m homolog_flywheel.run "
+        "$HOME/Projects/toe/venv/bin/python -m homolog_flywheel.run "
         f"--catalog {catalog} "
         "--shard-index $((10#$i - 2)) "
         f"--shard-count {shard_count} "
@@ -90,9 +91,16 @@ def main(argv: list[str] | None = None) -> int:
         )
         print("# analog: SSH fleet runs Python walks, not grok -p")
         print(f"# ssh-user={args.ssh_user} workdir={args.workdir}")
+        print("# This flag only PRINTS. It does not SSH and does not walk.")
+        print("# From ~/Playground, run the two commands below.")
+        print("# Shard 0 is linear_rotor only; other groups are other hosts.")
+        print("cd ~/Playground")
         print("bin/fleet copy ~/Projects/toe/experiments/homolog_flywheel/groups.yaml \\")
         print("  /home/kinaar/Playground/data/groups.yaml")
         print(f"bin/fleet run --hosts {args.hosts} -- '{remote}'")
+        print()
+        print(f"{NOTES_PREFIX} --emit-fleet did not contact bud2-bud9.")
+        print(f"{NOTES_PREFIX} cd ~/Playground and run the bin/fleet lines.")
         return 0
     if args.dry_run:
         out = Path(args.out)

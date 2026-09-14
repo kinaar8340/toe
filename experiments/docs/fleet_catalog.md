@@ -44,21 +44,19 @@ Empty shards (index 5–7 with five groups) write JSON with `n_rows: 0` and exit
 
 ## Fan-out (Python walks, not grok)
 
-```bash
-PYTHONPATH=src:experiments python -m homolog_flywheel.cluster_sweep --emit-fleet
-```
-
-On `bud`, from Playground:
+`--emit-fleet` only prints. Run the printed `bin/fleet` lines from `~/Playground`.
 
 ```bash
+cd ~/Playground
 bin/fleet copy ~/Projects/toe/experiments/homolog_flywheel/groups.yaml \
   /home/kinaar/Playground/data/groups.yaml
 
 bin/fleet run -- '
+  mkdir -p $HOME/Playground/data $HOME/Playground/results
   host=$(hostname)
   i=${host#bud}
   PYTHONPATH=$HOME/Projects/toe/src:$HOME/Projects/toe/experiments \
-  python -m homolog_flywheel.run \
+  $HOME/Projects/toe/venv/bin/python -m homolog_flywheel.run \
     --catalog $HOME/Playground/data/groups.yaml \
     --shard-index $((10#$i - 2)) --shard-count 8 \
     --n-max 8 \

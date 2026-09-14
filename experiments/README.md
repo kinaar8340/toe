@@ -95,18 +95,31 @@ PYTHONPATH=src:experiments python -m homolog_flywheel.run \
 
 Writes `homolog_catalog.csv` with `closure_rad` and `commutator_norm`. `ring4_rotor` reports closure error at golden \(\theta\); do not tune \(\theta\) to force a cycloalkane.
 
-Shard the catalog (CPU walk, not `grok -p`):
+Local shard 0 only (this is `linear_rotor`, not the full catalog):
 
 ```bash
 PYTHONPATH=src:experiments python -m homolog_flywheel.run \
   --catalog experiments/homolog_flywheel/groups.yaml \
   --shard-index 0 --shard-count 8 \
   --out experiments/outputs/homolog_shard0.json
-PYTHONPATH=src:experiments python -m homolog_flywheel.cluster_sweep --dry-run
-PYTHONPATH=src:experiments python -m homolog_flywheel.cluster_sweep --emit-fleet
 ```
 
-See `docs/fleet_catalog.md`. Workers run Python 3.13 + `flux-hopf-lib==0.2.2`. Do not send the walk through eight Grok agents.
+`--emit-fleet` **prints** SSH commands. It does not fan out. From `~/Playground`:
+
+```bash
+cd ~/Playground
+bin/fleet copy ~/Projects/toe/experiments/homolog_flywheel/groups.yaml \
+  /home/kinaar/Playground/data/groups.yaml
+bin/fleet run --hosts bud2,bud3,bud4,bud5,bud6,bud7,bud8,bud9 -- \
+  'mkdir -p $HOME/Playground/results; host=$(hostname); i=${host#bud};
+   PYTHONPATH=$HOME/Projects/toe/src:$HOME/Projects/toe/experiments \
+   $HOME/Projects/toe/venv/bin/python -m homolog_flywheel.run \
+     --catalog $HOME/Playground/data/groups.yaml \
+     --shard-index $((10#$i - 2)) --shard-count 8 --n-max 4 \
+     --out $HOME/Playground/results/homolog_$host.json'
+```
+
+See `docs/fleet_catalog.md`. Workers: Python 3.13 venv + `flux-hopf-lib==0.2.2`. Do not `grok -p` the walk.
 
 `walk_phase_rad` stays \(\theta\). S² `axis_drift_rad` equals \(\theta\) on default \(z\) (CLI \(\perp\) bake-\(x\)); off-\(yz\) it is the constant chord \(\arccos(v\cdot R_x(\theta)v)\). Identity overlap at \(n=4\) changes. Aliases stay `butan`.
 
