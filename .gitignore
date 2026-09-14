@@ -48,3 +48,8 @@ outputs/
 papers/*.aux
 papers/*.log
 papers/*.out
+
+# homolog_flywheel experiment dumps (CSV/JSON/PNG); keep the folder
+!experiments/outputs/
+experiments/outputs/*
+!experiments/outputs/.gitkeep
