@@ -37,6 +37,11 @@ CSV_COLUMNS = [
     "step_geodesic_rad",
     "axis_drift_rad",
     "walk_phase_rad",
+    "closure_rad",
+    "commutator_norm",
+    "group_id",
+    "alias_family",
+    "word_hash",
     "identity_preservation",
 ]
 
@@ -53,6 +58,20 @@ def axis_drift_rad(axis_prev: np.ndarray, axis_now: np.ndarray) -> float:
     a = unit_axis(axis_prev)
     b = unit_axis(axis_now)
     return float(np.arccos(np.clip(float(np.dot(a, b)), -1.0, 1.0)))
+
+
+def closure_rad(q: np.ndarray) -> float:
+    """Distance of q to ±1. analog: ring-word metric, not a cycloalkane fit."""
+    return float(np.arccos(np.clip(abs(float(np.asarray(q, dtype=float).reshape(4)[0])), 0.0, 1.0)))
+
+
+def commutator_norm(r1: np.ndarray, r2: np.ndarray) -> float:
+    """|| r1 r2 r1^{-1} r2^{-1} - 1 || for unit rotors. analog: branch word, not isoalkane."""
+    a = q_normalize(r1)
+    b = q_normalize(r2)
+    comm = q_mult(q_mult(q_mult(a, b), q_conj(a)), q_conj(b))
+    ident = np.array([1.0, 0.0, 0.0, 0.0])
+    return float(np.linalg.norm(np.asarray(comm, dtype=float) - ident))
 
 
 def measure(
@@ -96,6 +115,11 @@ def measure(
             if state.n == 1
             else (float(state.insertion_angle_rad) if state.step_mode == "published" else 0.0)
         ),
+        "closure_rad": closure_rad(q),
+        "commutator_norm": float("nan"),
+        "group_id": state.group_id,
+        "alias_family": state.alias_family,
+        "word_hash": "",
         # analog: z-map vocabulary, cheap overlap, not the 300-frame map
         "identity_preservation": identity_overlap,
         "Z": int(state.Z),

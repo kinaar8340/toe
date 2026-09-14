@@ -29,6 +29,7 @@ from homolog_flywheel.analog import (
     NOTES_PREFIX,
     STEP_MODES,
 )
+from homolog_flywheel.catalog import CATALOG_COLUMNS, CATALOG_PATH, run_catalog
 from homolog_flywheel.compare import (
     COMPARE_COLUMNS,
     SUMMARY_COLUMNS,
@@ -181,6 +182,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         metavar=("X", "Y", "Z"),
         help="second CLI axis for a published walking-plane probe (use an x-component)",
     )
+    parser.add_argument(
+        "--catalog",
+        nargs="?",
+        const=str(CATALOG_PATH),
+        default=None,
+        help="run insertion-word catalog (default groups.yaml if flag has no path)",
+    )
     return parser.parse_args(argv)
 
 
@@ -194,6 +202,12 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = args.out if args.out.is_absolute() else REPO_ROOT / args.out
     json_path = out_dir / "homolog_run.json"
 
+    if args.catalog is not None:
+        code = _run_catalog(args, Path(args.catalog), out_dir)
+        if code != 0:
+            return code
+        if not args.compare_modes and args.probe_axis is None:
+            return 0
     if args.compare_modes:
         return _run_compare(args, axis, out_dir, json_path)
     if args.probe_axis is not None:
@@ -412,6 +426,82 @@ def _run_probe(
     print()
     print(f"{NOTES_PREFIX} wrote {probe_csv}")
     print(f"{NOTES_PREFIX} wrote {json_path}")
+    print(verdict)
+    return 0
+
+
+def _run_catalog(
+    args: argparse.Namespace,
+    catalog_path: Path,
+    out_dir: Path,
+) -> int:
+    src = catalog_path if catalog_path.is_absolute() else REPO_ROOT / catalog_path
+    rows, meta = run_catalog(
+        src,
+        angle_rad=float(args.angle_rad),
+        seed=int(args.seed),
+    )
+    if not rows:
+        print(f"{NOTES_PREFIX} catalog produced no rows", file=sys.stderr)
+        return 2
+    for row in rows:
+        if int(row["n"]) == 1:
+            q = np.array([row["q_w"], row["q_x"], row["q_y"], row["q_z"]], dtype=float)
+            if not np.allclose(q, IDENTITY_Q, atol=1e-6):
+                print(
+                    f"{NOTES_PREFIX} identity seed is not q=(1,0,0,0) within 1e-6", file=sys.stderr
+                )
+                return 2
+        if float(row["unit_norm_error"]) >= 1e-6:
+            print(f"{NOTES_PREFIX} catalog failed unit-norm check", file=sys.stderr)
+            return 2
+        if int(row["Z"]) != int(meta["z_frozen"]):
+            print(f"{NOTES_PREFIX} catalog changed frozen Z", file=sys.stderr)
+            return 2
+
+    csv_path = out_dir / "homolog_catalog.csv"
+    catalog_json = out_dir / "homolog_catalog.json"
+    _write_csv(csv_path, rows, CATALOG_COLUMNS)
+    verdict = (
+        f"{NOTES_PREFIX} catalog: group ids are insertion words; "
+        "molecular names are alias families; Z frozen; n is not Z. "
+        "Do not tune θ so a ring word closes."
+    )
+    payload = {
+        "disclaimer": DISCLAIMER,
+        "hypothesis_verdict": verdict,
+        "config": {
+            "catalog": str(src),
+            "n_max": args.n_max,
+            "angle_rad": float(args.angle_rad),
+            "seed": int(args.seed),
+            "out": str(out_dir),
+            **meta,
+        },
+        "git_sha": _git_sha(),
+        "flux_hopf_lib_version": _lib_version(),
+        "rows": rows,
+    }
+    _write_json(catalog_json, payload)
+    print(DISCLAIMER)
+    print()
+    print(f"{NOTES_PREFIX} insertion-word catalog; Z frozen; n is not Z")
+    print()
+    _print_table(
+        rows,
+        cols=[
+            "group_id",
+            "n",
+            "alias",
+            "step_mode",
+            "identity_overlap",
+            "closure_rad",
+            "commutator_norm",
+        ],
+    )
+    print()
+    print(f"{NOTES_PREFIX} wrote {csv_path}")
+    print(f"{NOTES_PREFIX} wrote {catalog_json}")
     print(verdict)
     return 0
 

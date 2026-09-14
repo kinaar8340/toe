@@ -19,7 +19,7 @@ from typing import Any
 
 import numpy as np
 
-from homolog_flywheel.analog import FROZEN_Z, NOTES_PREFIX, STEP_MODES
+from homolog_flywheel.analog import DEFAULT_ALIAS_FAMILY, FROZEN_Z, NOTES_PREFIX, STEP_MODES
 from homolog_flywheel.insert import (
     BAKE_X,
     axis_for_mode,
@@ -77,6 +77,8 @@ def run_chain(
     slow: bool = False,
     seed: int = 0,
     Z: int = FROZEN_Z,
+    alias_family: str = DEFAULT_ALIAS_FAMILY,
+    group_id: str = "",
 ) -> list[HomologState]:
     states = [
         identity_seed(
@@ -84,6 +86,8 @@ def run_chain(
             insertion_axis=axis,
             insertion_angle_rad=angle_rad,
             Z=Z,
+            alias_family=alias_family,
+            group_id=group_id,
         )
     ]
     for _ in range(1, n_max):

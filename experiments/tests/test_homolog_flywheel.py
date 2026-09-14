@@ -223,3 +223,48 @@ def test_s2_drift_is_chord_formula_not_walk_phase():
             assert chord == pytest.approx(theta, abs=1e-6)
         else:
             assert abs(chord - theta) > 1e-3
+
+
+def test_disclaimer_names_insertion_words():
+    from homolog_flywheel.analog import DISCLAIMER
+
+    assert "group ids are insertion words; molecular names are alias families." in DISCLAIMER
+
+
+def test_catalog_z_frozen_and_aliases_by_family():
+    from homolog_flywheel.catalog import run_catalog
+
+    rows, meta = run_catalog()
+    assert int(meta["z_frozen"]) == FROZEN_Z
+    assert all(int(r["Z"]) == FROZEN_Z for r in rows)
+    alkane = [r for r in rows if r["alias_family"] == "alkane" and r["n"] == 4]
+    iso = [r for r in rows if r["alias_family"] == "isoalkane" and r["n"] == 4]
+    cyclo = [r for r in rows if r["alias_family"] == "cyclo" and r["n"] == 4]
+    assert alkane
+    assert {r["alias"] for r in alkane} == {"butan"}
+    assert iso and {r["alias"] for r in iso} == {"iso-butan"}
+    assert cyclo and {r["alias"] for r in cyclo} == {"cyclo-butan"}
+    modes = {r["step_mode"] for r in alkane}
+    assert "rotor" in modes and "published" in modes
+
+
+def test_branch_commutator_nonzero():
+    from homolog_flywheel.catalog import run_catalog
+
+    rows, _meta = run_catalog()
+    branch = [r for r in rows if r["group_id"] == "branch_yz"]
+    assert branch
+    for row in branch:
+        assert float(row["commutator_norm"]) > 1e-6
+        assert int(row["Z"]) == FROZEN_Z
+
+
+def test_ring4_closure_is_not_tuned_to_zero():
+    from homolog_flywheel.catalog import run_catalog
+
+    rows, _meta = run_catalog()
+    ring = [r for r in rows if r["group_id"] == "ring4_rotor" and r["n"] == 4]
+    assert len(ring) == 1
+    # analog: golden θ does not close a square; do not curve-fit to cycloalkane
+    assert float(ring[0]["closure_rad"]) > 1e-3
+    assert ring[0]["alias"] == "cyclo-butan"

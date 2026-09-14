@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from homolog_flywheel.analog import FROZEN_Z, NOTES_PREFIX, alias_for
+from homolog_flywheel.analog import DEFAULT_ALIAS_FAMILY, FROZEN_Z, NOTES_PREFIX, alias_for
 
 
 @dataclass
@@ -34,6 +34,8 @@ class HomologState:
     notes: str = NOTES_PREFIX
     Z: int = FROZEN_Z  # frozen element-analog index; insert must not change this
     cli_axis: NDArray[np.floating] | None = None  # user/CLI reference; mode rule maps this
+    alias_family: str = DEFAULT_ALIAS_FAMILY
+    group_id: str = ""
 
     def __post_init__(self) -> None:
         self.q = np.asarray(self.q, dtype=float).reshape(4)
@@ -45,4 +47,4 @@ class HomologState:
         if not self.notes.startswith(NOTES_PREFIX):
             self.notes = f"{NOTES_PREFIX} {self.notes}"
         if self.alias == "":
-            self.alias = alias_for(self.n)
+            self.alias = alias_for(self.n, family=self.alias_family)

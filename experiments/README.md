@@ -9,6 +9,7 @@ The alkane / CH2 / carbene language is an analogy for a discrete insertion step.
 n=1 is one flywheel at quaternion identity (methane slot).
 n=2 is one extra published step: one extra flywheel XOR one extra rotor insertion.
 Do not emit “proves”, “element”, “periodic table identity”, or “carbene is a flywheel”.
+group ids are insertion words; molecular names are alias families.
 ```
 
 ## Mapping table (hypothesis only)
@@ -84,6 +85,16 @@ Walking-plane probe (published only; still not \(Z\)):
 PYTHONPATH=src:experiments python -m homolog_flywheel.run --n-max 4 --probe-axis 1 0 1
 ```
 
+Insertion-word catalog (laptop path; group ids are words, names are alias families):
+
+```bash
+PYTHONPATH=src:experiments python -m homolog_flywheel.run \
+  --catalog experiments/homolog_flywheel/groups.yaml \
+  --compare-modes --probe-axis 1 0 1
+```
+
+Writes `homolog_catalog.csv` with `closure_rad` and `commutator_norm`. `ring4_rotor` reports closure error at golden \(\theta\); do not tune \(\theta\) to force a cycloalkane. `cluster_sweep` is not wired until this path is green.
+
 `walk_phase_rad` stays \(\theta\). S² `axis_drift_rad` equals \(\theta\) on default \(z\) (CLI \(\perp\) bake-\(x\)); off-\(yz\) it is the constant chord \(\arccos(v\cdot R_x(\theta)v)\). Identity overlap at \(n=4\) changes. Aliases stay `butan`.
 
 ## What this does not do
@@ -93,6 +104,7 @@ PYTHONPATH=src:experiments python -m homolog_flywheel.run --n-max 4 --probe-axis
 - No edits to QGA, `papers/`, or `src/conduit.py`.
 - No mapping of chain index \(n\) onto atomic number `Z`.
 - No second alkene / cycloalkane lattice.
+- Do not search \(\theta\) so that a ring word closes and then call that cyclobutane.
 
 ## Relation to `scripts/z_flywheel_map.py`
 

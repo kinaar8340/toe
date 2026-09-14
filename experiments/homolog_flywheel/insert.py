@@ -267,7 +267,7 @@ def insert(
 
     return HomologState(
         n=n_next,
-        alias=alias_for(n_next),
+        alias=alias_for(n_next, family=state.alias_family),
         q=q,
         flywheels=flywheels,
         step_mode=mode,
@@ -277,4 +277,6 @@ def insert(
         notes=notes,
         Z=frozen_z,
         cli_axis=cli,
+        alias_family=state.alias_family,
+        group_id=state.group_id,
     )

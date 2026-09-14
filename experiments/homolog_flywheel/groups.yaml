@@ -1,0 +1,31 @@
+# analog: insertion words. Molecular names are alias families, not identities.
+# Z stays frozen. n is not atomic number.
+# MODEL, not theorem.
+
+defaults:
+  z_frozen: 2
+  theta: golden          # GOLDEN_ANGLE_RAD
+  bake: [1, 0, 0]
+  n_max: 4
+groups:
+  - id: linear_rotor
+    alias_family: alkane
+    step: rotor
+    axis: [0, 0, 1]
+  - id: linear_published
+    alias_family: alkane
+    step: published
+    axis: [0, 0, 1]
+  - id: linear_published_offyz
+    alias_family: alkane
+    step: published
+    axis: [1, 0, 1]
+  - id: branch_yz
+    alias_family: isoalkane
+    word: [rotor, branch, rotor]
+    axes: [[0, 0, 1], [0, 1, 0]]
+  - id: ring4_rotor
+    alias_family: cyclo
+    step: rotor
+    n_max: 4
+    metric: closure

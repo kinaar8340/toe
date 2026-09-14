@@ -18,7 +18,8 @@ DISCLAIMER = (
     "The alkane / CH2 / carbene language is an analogy for a discrete insertion step.\n"
     "n=1 is one flywheel at quaternion identity (methane slot).\n"
     "n=2 is one extra published step: one extra flywheel XOR one extra rotor insertion.\n"
-    "Do not emit “proves”, “element”, “periodic table identity”, or “carbene is a flywheel”."
+    "Do not emit “proves”, “element”, “periodic table identity”, or “carbene is a flywheel”.\n"
+    "group ids are insertion words; molecular names are alias families."
 )
 
 # Display aliases from the source figure. Labels only.
@@ -55,8 +56,19 @@ AXIS_RULE = {
 BAKE_X_AXIS = (1.0, 0.0, 0.0)
 
 
-def alias_for(n: int) -> str:
-    """Return the display alias for chain index n."""
-    if n not in ALKANE_ALIAS:
-        raise ValueError(f"analog: n={n} is outside the alias table 1..{N_MAX}")
-    return ALKANE_ALIAS[n]
+ALIAS_FAMILIES: dict[str, dict[int, str]] = {
+    "alkane": ALKANE_ALIAS,
+    "isoalkane": {n: f"iso-{name}" for n, name in ALKANE_ALIAS.items()},
+    "cyclo": {n: f"cyclo-{name}" for n, name in ALKANE_ALIAS.items()},
+}
+DEFAULT_ALIAS_FAMILY = "alkane"
+
+
+def alias_for(n: int, family: str = DEFAULT_ALIAS_FAMILY) -> str:
+    """Display alias for (family, n) only. Identical across step modes. Not an identity."""
+    table = ALIAS_FAMILIES.get(family)
+    if table is None:
+        raise ValueError(f"analog: unknown alias family {family!r}")
+    if n not in table:
+        raise ValueError(f"analog: n={n} is outside the alias table 1..{N_MAX} for {family}")
+    return table[n]
