@@ -190,3 +190,36 @@ def test_published_off_yz_walk_phase_stays_theta_overlap_changes():
     expected_off = expected_s2_drift(OFF_YZ_AXIS, theta)
     for row in off_rows:
         assert float(row["axis_drift_rad"]) == pytest.approx(expected_off, abs=1e-6)
+
+
+def _s2_chord_formula(cli_axis: np.ndarray, theta: float) -> tuple[float, float]:
+    """Independent S² chord: arccos(cos²φ + sin²φ cosθ), φ = angle(v, bake-x).
+
+    analog: this is the embedding of walk_phase on S², not walk_phase itself.
+    """
+    bake_x = np.array([1.0, 0.0, 0.0])
+    v = np.asarray(cli_axis, dtype=float)
+    v = v / np.linalg.norm(v)
+    phi = float(np.arccos(np.clip(float(np.dot(v, bake_x)), -1.0, 1.0)))
+    chord = float(math.acos(math.cos(phi) ** 2 + math.sin(phi) ** 2 * math.cos(theta)))
+    return phi, chord
+
+
+def test_s2_drift_is_chord_formula_not_walk_phase():
+    """Probe axes: axis_drift matches the chord formula; it is not walk_phase."""
+    theta = DEFAULT_ANGLE_RAD
+    rows, _summaries = published_axis_probe(4, theta, DEFAULT_AXIS, OFF_YZ_AXIS)
+    for cli in (DEFAULT_AXIS, OFF_YZ_AXIS):
+        v = np.asarray(cli, dtype=float)
+        v = v / np.linalg.norm(v)
+        key = ",".join(f"{x:.6f}" for x in v)
+        phi, chord = _s2_chord_formula(cli, theta)
+        subset = [r for r in rows if r.get("cli_axis") == key and int(r["n"]) >= 2]
+        assert subset
+        for row in subset:
+            assert float(row["walk_phase_rad"]) == pytest.approx(theta, abs=1e-6)
+            assert float(row["axis_drift_rad"]) == pytest.approx(chord, abs=1e-6)
+        if abs(phi - math.pi / 2) < 1e-6:
+            assert chord == pytest.approx(theta, abs=1e-6)
+        else:
+            assert abs(chord - theta) > 1e-3

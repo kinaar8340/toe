@@ -45,3 +45,4 @@ test_default_published_axis_stays_in_yz = _mod.test_default_published_axis_stays
 test_published_off_yz_walk_phase_stays_theta_overlap_changes = (
     _mod.test_published_off_yz_walk_phase_stays_theta_overlap_changes
 )
+test_s2_drift_is_chord_formula_not_walk_phase = _mod.test_s2_drift_is_chord_formula_not_walk_phase
