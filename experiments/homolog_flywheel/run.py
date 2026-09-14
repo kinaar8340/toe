@@ -189,6 +189,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="run insertion-word catalog (default groups.yaml if flag has no path)",
     )
+    parser.add_argument(
+        "--shard-index",
+        type=int,
+        default=0,
+        help="catalog shard index (bud2 → 0, bud3 → 1, …)",
+    )
+    parser.add_argument(
+        "--shard-count",
+        type=int,
+        default=1,
+        help="number of catalog shards (8 for bud2-bud9)",
+    )
     return parser.parse_args(argv)
 
 
@@ -199,11 +211,17 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     np.random.seed(args.seed)
     axis = np.asarray(args.axis, dtype=float)
-    out_dir = args.out if args.out.is_absolute() else REPO_ROOT / args.out
+    out_arg = args.out if args.out.is_absolute() else REPO_ROOT / args.out
+    if out_arg.suffix == ".json":
+        out_dir = out_arg.parent
+        catalog_json_path = out_arg
+    else:
+        out_dir = out_arg
+        catalog_json_path = out_dir / "homolog_catalog.json"
     json_path = out_dir / "homolog_run.json"
 
     if args.catalog is not None:
-        code = _run_catalog(args, Path(args.catalog), out_dir)
+        code = _run_catalog(args, Path(args.catalog), out_dir, catalog_json_path)
         if code != 0:
             return code
         if not args.compare_modes and args.probe_axis is None:
@@ -434,16 +452,50 @@ def _run_catalog(
     args: argparse.Namespace,
     catalog_path: Path,
     out_dir: Path,
+    catalog_json: Path,
 ) -> int:
     src = catalog_path if catalog_path.is_absolute() else REPO_ROOT / catalog_path
     rows, meta = run_catalog(
         src,
         angle_rad=float(args.angle_rad),
         seed=int(args.seed),
+        shard_index=int(args.shard_index),
+        shard_count=int(args.shard_count),
+        n_max_override=int(args.n_max),
     )
-    if not rows:
-        print(f"{NOTES_PREFIX} catalog produced no rows", file=sys.stderr)
-        return 2
+    if int(args.shard_count) > 1 and not rows:
+        # Empty shard is a valid fleet slice, not a failed walk.
+        out_dir.mkdir(parents=True, exist_ok=True)
+        catalog_json.parent.mkdir(parents=True, exist_ok=True)
+        csv_path = (
+            catalog_json.with_suffix(".csv")
+            if catalog_json.suffix == ".json"
+            else out_dir / "homolog_catalog.csv"
+        )
+        _write_csv(csv_path, [], CATALOG_COLUMNS)
+        payload = {
+            "disclaimer": DISCLAIMER,
+            "hypothesis_verdict": f"{NOTES_PREFIX} empty catalog shard; Z frozen.",
+            "config": {
+                "catalog": str(src),
+                "n_max": args.n_max,
+                "angle_rad": float(args.angle_rad),
+                "seed": int(args.seed),
+                "out": str(catalog_json),
+                **meta,
+            },
+            "git_sha": _git_sha(),
+            "flux_hopf_lib_version": _lib_version(),
+            "rows": [],
+            "reduce": meta.get("reduce"),
+        }
+        _write_json(catalog_json, payload)
+        print(DISCLAIMER)
+        print()
+        print(
+            f"{NOTES_PREFIX} empty shard {args.shard_index}/{args.shard_count}; wrote {catalog_json}"
+        )
+        return 0
     for row in rows:
         if int(row["n"]) == 1:
             q = np.array([row["q_w"], row["q_x"], row["q_y"], row["q_z"]], dtype=float)
@@ -459,8 +511,9 @@ def _run_catalog(
             print(f"{NOTES_PREFIX} catalog changed frozen Z", file=sys.stderr)
             return 2
 
-    csv_path = out_dir / "homolog_catalog.csv"
-    catalog_json = out_dir / "homolog_catalog.json"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    catalog_json.parent.mkdir(parents=True, exist_ok=True)
+    csv_path = catalog_json.with_suffix(".csv")
     _write_csv(csv_path, rows, CATALOG_COLUMNS)
     verdict = (
         f"{NOTES_PREFIX} catalog: group ids are insertion words; "
@@ -475,12 +528,13 @@ def _run_catalog(
             "n_max": args.n_max,
             "angle_rad": float(args.angle_rad),
             "seed": int(args.seed),
-            "out": str(out_dir),
+            "out": str(catalog_json),
             **meta,
         },
         "git_sha": _git_sha(),
         "flux_hopf_lib_version": _lib_version(),
         "rows": rows,
+        "reduce": meta.get("reduce"),
     }
     _write_json(catalog_json, payload)
     print(DISCLAIMER)

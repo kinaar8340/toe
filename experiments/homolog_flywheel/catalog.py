@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import socket
 from pathlib import Path
 from typing import Any
 
@@ -131,18 +132,37 @@ def _annotate(
     return rows
 
 
+def shard_specs(
+    groups: list[dict[str, Any]],
+    shard_index: int,
+    shard_count: int,
+) -> list[dict[str, Any]]:
+    """Give group i to shard i % shard_count. analog: shard the catalog, not the narrative."""
+    if shard_count < 1:
+        raise ValueError("analog: --shard-count must be >= 1")
+    if not 0 <= shard_index < shard_count:
+        raise ValueError(f"analog: --shard-index must be in 0..{shard_count - 1}")
+    return [g for i, g in enumerate(groups) if i % shard_count == shard_index]
+
+
 def run_group(
     spec: dict[str, Any],
     defaults: dict[str, Any],
     *,
     angle_rad: float,
     seed: int = 0,
+    n_max_override: int | None = None,
 ) -> list[dict[str, Any]]:
     """One catalog word. analog: insertion word, not a molecule."""
     group_id = str(spec["id"])
     family = str(spec.get("alias_family", DEFAULT_ALIAS_FAMILY))
     z = int(spec.get("z_frozen", defaults.get("z_frozen", FROZEN_Z)))
-    n_max = int(spec.get("n_max", defaults.get("n_max", 4)))
+    if "n_max" in spec:
+        n_max = int(spec["n_max"])
+    elif n_max_override is not None:
+        n_max = int(n_max_override)
+    else:
+        n_max = int(defaults.get("n_max", 4))
     digest = word_hash({"id": group_id, **spec, "theta": angle_rad, "z": z})
     comm = float("nan")
 
@@ -192,22 +212,64 @@ def run_group(
     )
 
 
+def catalog_reduce(rows: list[dict[str, Any]], meta: dict[str, Any]) -> dict[str, Any]:
+    """Structured reduce fields for a later text pass. Not a chemistry claim."""
+    aliases_ok = True
+    seen: dict[tuple[str, int], str] = {}
+    for row in rows:
+        key = (str(row["alias_family"]), int(row["n"]))
+        alias = str(row["alias"])
+        if key in seen and seen[key] != alias:
+            aliases_ok = False
+        seen[key] = alias
+    closures = [float(r["closure_rad"]) for r in rows] if rows else []
+    return {
+        "host": socket.gethostname(),
+        "n_rows": len(rows),
+        "modes": sorted({str(r["step_mode"]) for r in rows}),
+        "group_ids": sorted({str(r["group_id"]) for r in rows}),
+        "max_closure_rad": max(closures) if closures else None,
+        "aliases_identical": aliases_ok,
+        "z_frozen": int(meta.get("z_frozen", FROZEN_Z)),
+        "shard_index": int(meta.get("shard_index", 0)),
+        "shard_count": int(meta.get("shard_count", 1)),
+    }
+
+
 def run_catalog(
     path: Path | None = None,
     *,
     angle_rad: float | None = None,
     seed: int = 0,
+    shard_index: int = 0,
+    shard_count: int = 1,
+    n_max_override: int | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     data = load_catalog(path)
     defaults = dict(data.get("defaults") or {})
     theta = resolve_theta(defaults.get("theta"), angle_rad=angle_rad)
+    groups = list(data.get("groups") or [])
+    sliced = shard_specs(groups, shard_index, shard_count)
     rows: list[dict[str, Any]] = []
-    for spec in data.get("groups") or []:
-        rows.extend(run_group(spec, defaults, angle_rad=theta, seed=seed))
+    for spec in sliced:
+        rows.extend(
+            run_group(
+                spec,
+                defaults,
+                angle_rad=theta,
+                seed=seed,
+                n_max_override=n_max_override,
+            )
+        )
     meta = {
         "defaults": defaults,
         "theta": theta,
-        "n_groups": len(data.get("groups") or []),
+        "n_groups": len(groups),
+        "n_groups_this_shard": len(sliced),
+        "group_ids": [str(g["id"]) for g in sliced],
         "z_frozen": int(defaults.get("z_frozen", FROZEN_Z)),
+        "shard_index": shard_index,
+        "shard_count": shard_count,
     }
+    meta["reduce"] = catalog_reduce(rows, meta)
     return rows, meta

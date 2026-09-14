@@ -268,3 +268,33 @@ def test_ring4_closure_is_not_tuned_to_zero():
     # analog: golden θ does not close a square; do not curve-fit to cycloalkane
     assert float(ring[0]["closure_rad"]) > 1e-3
     assert ring[0]["alias"] == "cyclo-butan"
+
+
+def test_catalog_shards_partition_groups():
+    from homolog_flywheel.catalog import load_catalog, run_catalog, shard_specs
+
+    groups = load_catalog()["groups"]
+    shard_count = 8
+    seen: list[str] = []
+    for idx in range(shard_count):
+        sliced = shard_specs(groups, idx, shard_count)
+        rows, meta = run_catalog(shard_index=idx, shard_count=shard_count)
+        ids = [str(g["id"]) for g in sliced]
+        assert meta["group_ids"] == ids
+        assert meta["reduce"]["z_frozen"] == FROZEN_Z
+        assert meta["reduce"]["aliases_identical"] is True
+        if not ids:
+            assert rows == []
+            assert meta["reduce"]["n_rows"] == 0
+        seen.extend(ids)
+    assert seen == [str(g["id"]) for g in groups]
+
+
+def test_ring4_keeps_n_max_when_cli_override_is_8():
+    from homolog_flywheel.catalog import run_catalog
+
+    rows, _meta = run_catalog(n_max_override=8)
+    ring_ns = [int(r["n"]) for r in rows if r["group_id"] == "ring4_rotor"]
+    linear_ns = [int(r["n"]) for r in rows if r["group_id"] == "linear_rotor"]
+    assert ring_ns == [1, 2, 3, 4]
+    assert linear_ns == list(range(1, 9))

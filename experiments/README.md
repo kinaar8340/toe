@@ -93,7 +93,20 @@ PYTHONPATH=src:experiments python -m homolog_flywheel.run \
   --compare-modes --probe-axis 1 0 1
 ```
 
-Writes `homolog_catalog.csv` with `closure_rad` and `commutator_norm`. `ring4_rotor` reports closure error at golden \(\theta\); do not tune \(\theta\) to force a cycloalkane. `cluster_sweep` is not wired until this path is green.
+Writes `homolog_catalog.csv` with `closure_rad` and `commutator_norm`. `ring4_rotor` reports closure error at golden \(\theta\); do not tune \(\theta\) to force a cycloalkane.
+
+Shard the catalog (CPU walk, not `grok -p`):
+
+```bash
+PYTHONPATH=src:experiments python -m homolog_flywheel.run \
+  --catalog experiments/homolog_flywheel/groups.yaml \
+  --shard-index 0 --shard-count 8 \
+  --out experiments/outputs/homolog_shard0.json
+PYTHONPATH=src:experiments python -m homolog_flywheel.cluster_sweep --dry-run
+PYTHONPATH=src:experiments python -m homolog_flywheel.cluster_sweep --emit-fleet
+```
+
+See `docs/fleet_catalog.md`. Workers run Python 3.13 + `flux-hopf-lib==0.2.2`. Do not send the walk through eight Grok agents.
 
 `walk_phase_rad` stays \(\theta\). S² `axis_drift_rad` equals \(\theta\) on default \(z\) (CLI \(\perp\) bake-\(x\)); off-\(yz\) it is the constant chord \(\arccos(v\cdot R_x(\theta)v)\). Identity overlap at \(n=4\) changes. Aliases stay `butan`.
 
