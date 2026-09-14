@@ -298,3 +298,39 @@ def test_ring4_keeps_n_max_when_cli_override_is_8():
     linear_ns = [int(r["n"]) for r in rows if r["group_id"] == "linear_rotor"]
     assert ring_ns == [1, 2, 3, 4]
     assert linear_ns == list(range(1, 9))
+
+
+def test_merge_shards_keeps_empty_witnesses_and_ring_open():
+    from homolog_flywheel.catalog import analog_run_verdict, merge_shard_files, run_catalog
+
+    nonempty = []
+    empty = []
+    for idx in range(8):
+        rows, meta = run_catalog(shard_index=idx, shard_count=8)
+        payload = {"rows": rows, "reduce": meta["reduce"], "config": meta}
+        nonempty.append(payload) if rows else empty.append(payload)
+    # Write temp shards via merge_shard_files using in-memory dump
+    import json
+    from pathlib import Path
+
+    tmp = Path("/tmp/homolog_merge_test")
+    tmp.mkdir(exist_ok=True)
+    paths = []
+    for i, payload in enumerate(nonempty + empty):
+        p = tmp / f"homolog_t{i}.json"
+        p.write_text(json.dumps(payload))
+        paths.append(p)
+    merged = merge_shard_files(paths)
+    assert merged["n_nonempty_shards"] == 5
+    assert merged["n_empty_shards"] == 3
+    assert set(merged["group_ids"]) == {
+        "linear_rotor",
+        "linear_published",
+        "linear_published_offyz",
+        "branch_yz",
+        "ring4_rotor",
+    }
+    ring4 = [r for r in merged["rows"] if r["group_id"] == "ring4_rotor" and r["n"] == 4]
+    assert ring4 and float(ring4[0]["closure_rad"]) > 1e-3
+    assert merged["z_ok"] is True
+    assert "not a QGA result" in analog_run_verdict(merged["rows"])

@@ -53,3 +53,6 @@ papers/*.out
 !experiments/outputs/
 experiments/outputs/*
 !experiments/outputs/.gitkeep
+!experiments/outputs/homolog_catalog_merged.json
+!experiments/outputs/homolog_catalog_merged.csv
+!experiments/outputs/empty_witnesses.txt

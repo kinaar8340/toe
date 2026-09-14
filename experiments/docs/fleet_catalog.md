@@ -66,6 +66,16 @@ bin/fleet run -- '
 
 `--n-max 8` applies to groups that do not set their own `n_max`. `ring4_rotor` stays `n_max: 4`.
 
+## Merge on the laptop
+
+```bash
+PYTHONPATH=src:experiments python -m homolog_flywheel.merge_shards \
+  --in experiments/outputs/fleet \
+  --out experiments/outputs/homolog_catalog_merged.json
+```
+
+Merges the five non-empty shards. bud7–bud9 stay empty-shard witnesses. Do not retune \(\theta\) on `ring4_rotor`.
+
 ## What Grok-on-workers is for, after JSON exists
 
 ```bash

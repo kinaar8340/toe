@@ -1,0 +1,5 @@
+# analog: empty catalog shards from the 8-host fan-out. Witnesses, not missing data.
+# group i → shard i % 8. Five words, so shards 5–7 are empty by design.
+bud7
+bud8
+bud9

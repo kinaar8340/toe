@@ -121,6 +121,14 @@ bin/fleet run --hosts bud2,bud3,bud4,bud5,bud6,bud7,bud8,bud9 -- \
 
 See `docs/fleet_catalog.md`. Workers: Python 3.13 venv + `flux-hopf-lib==0.2.2`. Do not `grok -p` the walk.
 
+Merge shards on the laptop (empty shards stay witnesses; do not retune \(\theta\)):
+
+```bash
+PYTHONPATH=src:experiments python -m homolog_flywheel.merge_shards \
+  --in experiments/outputs/fleet \
+  --out experiments/outputs/homolog_catalog_merged.json
+```
+
 `walk_phase_rad` stays \(\theta\). S² `axis_drift_rad` equals \(\theta\) on default \(z\) (CLI \(\perp\) bake-\(x\)); off-\(yz\) it is the constant chord \(\arccos(v\cdot R_x(\theta)v)\). Identity overlap at \(n=4\) changes. Aliases stay `butan`.
 
 ## What this does not do

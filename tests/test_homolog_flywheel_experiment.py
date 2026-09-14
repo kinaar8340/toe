@@ -52,3 +52,6 @@ test_branch_commutator_nonzero = _mod.test_branch_commutator_nonzero
 test_ring4_closure_is_not_tuned_to_zero = _mod.test_ring4_closure_is_not_tuned_to_zero
 test_catalog_shards_partition_groups = _mod.test_catalog_shards_partition_groups
 test_ring4_keeps_n_max_when_cli_override_is_8 = _mod.test_ring4_keeps_n_max_when_cli_override_is_8
+test_merge_shards_keeps_empty_witnesses_and_ring_open = (
+    _mod.test_merge_shards_keeps_empty_witnesses_and_ring_open
+)

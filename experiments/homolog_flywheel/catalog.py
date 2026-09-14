@@ -17,7 +17,18 @@ import socket
 from pathlib import Path
 from typing import Any
 
-from homolog_flywheel.analog import DEFAULT_ALIAS_FAMILY, FROZEN_Z
+from homolog_flywheel.analog import DEFAULT_ALIAS_FAMILY, DISCLAIMER, FROZEN_Z, NOTES_PREFIX
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _repo_rel(path: Path) -> str:
+    try:
+        return str(Path(path).resolve().relative_to(_REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
 from homolog_flywheel.compare import run_chain
 from homolog_flywheel.insert import DEFAULT_ANGLE_RAD, small_rotor, unit_axis
 from homolog_flywheel.measure import commutator_norm
@@ -273,3 +284,89 @@ def run_catalog(
     }
     meta["reduce"] = catalog_reduce(rows, meta)
     return rows, meta
+
+
+def discover_shard_json(root: Path) -> list[Path]:
+    """Find homolog_*.json shard files under a results tree."""
+    root = Path(root)
+    if root.is_file() and root.suffix == ".json":
+        return [root]
+    files = sorted(root.glob("homolog_*.json"))
+    files += sorted(root.glob("*/homolog_*.json"))
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for path in files:
+        resolved = path.resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            out.append(path)
+    return out
+
+
+def analog_run_verdict(rows: list[dict[str, Any]]) -> str:
+    """Record analog overlap behaviour. Never a QGA result. Do not retune θ."""
+    n2 = [float(r["identity_overlap"]) for r in rows if int(r["n"]) == 2]
+    if n2 and any(v < 1e-3 for v in n2):
+        return "hypothesis: not supported by this run"
+    ring4 = [
+        float(r["closure_rad"])
+        for r in rows
+        if r.get("group_id") == "ring4_rotor" and int(r["n"]) == 4
+    ]
+    if ring4 and any(c < 1e-3 for c in ring4):
+        return (
+            f"{NOTES_PREFIX} ring4 closed at golden θ; do not treat as a cycloalkane fit. "
+            "hypothesis: not supported by this run"
+        )
+    return (
+        f"{NOTES_PREFIX} n=2 overlap is ~0.36 (not a collapse to 0, not a small insertion). "
+        "Rotor-family overlap recovers after n=2; published is not monotonic. "
+        "ring4_rotor does not close. analog only; not a QGA result."
+    )
+
+
+def merge_shard_files(paths: list[Path]) -> dict[str, Any]:
+    """Merge shard JSON. Empty shards stay as witnesses. Do not retune θ."""
+    shards: list[dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
+    empty: list[dict[str, Any]] = []
+    for path in paths:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        reduce = data.get("reduce") or data.get("config", {}).get("reduce") or {}
+        rec = {
+            "path": _repo_rel(path),
+            "host": reduce.get("host"),
+            "shard_index": reduce.get("shard_index"),
+            "n_rows": reduce.get("n_rows", len(data.get("rows") or [])),
+            "group_ids": reduce.get("group_ids") or data.get("config", {}).get("group_ids") or [],
+            "z_frozen": reduce.get("z_frozen"),
+            "aliases_identical": reduce.get("aliases_identical"),
+        }
+        shard_rows = list(data.get("rows") or [])
+        if shard_rows:
+            rows.extend(shard_rows)
+            shards.append(rec)
+        else:
+            empty.append(rec)
+
+    rows.sort(key=lambda r: (str(r.get("group_id")), int(r.get("n", 0))))
+    z_ok = all(int(r.get("Z", FROZEN_Z)) == FROZEN_Z for r in rows) if rows else True
+    meta = {
+        "disclaimer": DISCLAIMER,
+        "notes": (
+            f"{NOTES_PREFIX} merged fleet shards. Empty shards are witnesses. "
+            "Do not retune θ so ring4_rotor closes. n is not Z."
+        ),
+        "hypothesis_verdict": analog_run_verdict(rows),
+        "n_rows": len(rows),
+        "n_nonempty_shards": len(shards),
+        "n_empty_shards": len(empty),
+        "group_ids": sorted({str(r.get("group_id")) for r in rows}),
+        "z_frozen": FROZEN_Z,
+        "z_ok": z_ok,
+        "shards": shards,
+        "empty_shards": empty,
+        "rows": rows,
+        "reduce": catalog_reduce(rows, {"z_frozen": FROZEN_Z, "shard_index": -1, "shard_count": 8}),
+    }
+    return meta
