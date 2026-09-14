@@ -121,6 +121,13 @@ bin/fleet run --hosts bud2,bud3,bud4,bud5,bud6,bud7,bud8,bud9 -- \
 
 See `docs/fleet_catalog.md`. Workers: Python 3.13 venv + `flux-hopf-lib==0.2.2`. Do not `grok -p` the walk.
 
+Overnight analog grid (inverse word, axis hemisphere, optional `--slow`). Golden \(\theta\) stays frozen; `closure_rad(θ)` is a curve, not a fit. `--emit-fleet` only prints:
+
+```bash
+PYTHONPATH=src:experiments python -m homolog_flywheel.grid_sweep --dry-run
+PYTHONPATH=src:experiments python -m homolog_flywheel.grid_sweep --emit-fleet --n-max 10 --n-axes 64
+```
+
 Merge shards on the laptop (empty shards stay witnesses; do not retune \(\theta\)):
 
 ```bash

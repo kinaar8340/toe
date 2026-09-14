@@ -55,3 +55,8 @@ test_ring4_keeps_n_max_when_cli_override_is_8 = _mod.test_ring4_keeps_n_max_when
 test_merge_shards_keeps_empty_witnesses_and_ring_open = (
     _mod.test_merge_shards_keeps_empty_witnesses_and_ring_open
 )
+test_inverse_roundtrip_returns_to_identity = _mod.test_inverse_roundtrip_returns_to_identity
+test_theta_sample_records_golden_and_does_not_close = (
+    _mod.test_theta_sample_records_golden_and_does_not_close
+)
+test_grid_shards_fill_all_eight_hosts = _mod.test_grid_shards_fill_all_eight_hosts

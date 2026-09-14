@@ -311,7 +311,9 @@ def analog_run_verdict(rows: list[dict[str, Any]]) -> str:
     ring4 = [
         float(r["closure_rad"])
         for r in rows
-        if r.get("group_id") == "ring4_rotor" and int(r["n"]) == 4
+        if r.get("group_id") == "ring4_rotor"
+        and int(r["n"]) == 4
+        and str(r.get("theta_id", "golden")) == "golden"
     ]
     if ring4 and any(c < 1e-3 for c in ring4):
         return (

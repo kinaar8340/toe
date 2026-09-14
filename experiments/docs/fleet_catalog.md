@@ -76,6 +76,31 @@ PYTHONPATH=src:experiments python -m homolog_flywheel.merge_shards \
 
 Merges the five non-empty shards. bud7–bud9 stay empty-shard witnesses. Do not retune \(\theta\) on `ring4_rotor`.
 
+## Overnight grid (measure, do not retune)
+
+Keep `groups.yaml` and golden \(\theta\) as the frozen reference. `n-max` 10. Length does not buy runtime; `--slow` plus an axis/θ grid does.
+
+| host | shard | job |
+|---|---|---|
+| bud2 | 0 | `linear_rotor` forward + inverse, axis grid |
+| bud3 | 1 | `linear_published` forward + inverse, axis grid |
+| bud4 | 2 | `linear_published_offyz` family, axis grid |
+| bud5 | 3 | `branch_yz` commutator vs axis pair |
+| bud6 | 4 | `ring4_rotor` θ **sample** (not optimize) + `--slow` |
+| bud7 | 5 | published axis walk, many seeds |
+| bud8 | 6 | `--slow` PDE invariants on rotor word |
+| bud9 | 7 | `--slow` PDE invariants on published word |
+
+`--emit-fleet` only prints:
+
+```bash
+PYTHONPATH=src:experiments python -m homolog_flywheel.grid_sweep --emit-fleet --n-max 10 --n-axes 64
+```
+
+Do not search \(\theta\) so `ring4_rotor` closes. Inverse uses \(-\theta\) and `roundtrip_overlap`. Merge in the morning with `python -m homolog_flywheel.merge_shards --in …/night1`.
+
+If the quaternion grid still finishes too fast, shard `scripts/pde_relaxation.py` / `epoch_bake_sweep.py` / `magic_island_sweep.py` on the SSH fleet. Those stay Models. Do not use Ray unless it is already on every bud.
+
 ## What Grok-on-workers is for, after JSON exists
 
 ```bash

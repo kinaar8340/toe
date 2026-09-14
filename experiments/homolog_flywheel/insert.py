@@ -199,7 +199,9 @@ _map_z_to_flywheel = _load_map_z_to_flywheel()
 
 
 def published_phase_rad(step_index: int, angle_rad: float) -> float:
-    """Published golden-angle phase for local step_index. Does not use n as Z."""
+    """Published phase for local step_index. Signed so inverse is -theta. n is not Z."""
+    if float(angle_rad) < 0.0:
+        return float(step_index * angle_rad)
     if _apply_golden is not None:
         _, phase = _apply_golden(0.0, step_index=int(step_index), mode="golden")
         return float(phase)

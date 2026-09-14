@@ -334,3 +334,35 @@ def test_merge_shards_keeps_empty_witnesses_and_ring_open():
     assert ring4 and float(ring4[0]["closure_rad"]) > 1e-3
     assert merged["z_ok"] is True
     assert "not a QGA result" in analog_run_verdict(merged["rows"])
+
+
+def test_inverse_roundtrip_returns_to_identity():
+    from homolog_flywheel.compare import run_chain
+    from homolog_flywheel.grid_sweep import roundtrip_overlap
+    from homolog_flywheel.insert import DEFAULT_ANGLE_RAD, DEFAULT_AXIS
+
+    for mode in ("rotor", "published"):
+        states = run_chain(5, mode, DEFAULT_ANGLE_RAD, DEFAULT_AXIS)
+        assert roundtrip_overlap(states) == pytest.approx(1.0, abs=1e-5)
+
+
+def test_theta_sample_records_golden_and_does_not_close():
+    from homolog_flywheel.grid_sweep import GOLDEN, run_shard_job, theta_sample_grid
+
+    tagged = theta_sample_grid(5)
+    assert any(name == "golden" and abs(val - GOLDEN) < 1e-9 for name, val in tagged)
+    rows, _meta = run_shard_job(4, n_max=4, n_theta=4, n_axes=4, slow=False)
+    n4 = [r for r in rows if int(r["n"]) == 4]
+    by_id = {str(r["theta_id"]): float(r["closure_rad"]) for r in n4}
+    assert "golden" in by_id
+    assert by_id["golden"] > 1e-3
+
+
+def test_grid_shards_fill_all_eight_hosts():
+    from homolog_flywheel.grid_sweep import SHARD_JOBS
+
+    assert set(SHARD_JOBS) == set(range(8))
+    scans = {j["scan"] for j in SHARD_JOBS.values()}
+    assert "axis_inverse" in scans
+    assert "theta_sample" in scans
+    assert "slow_word" in scans
