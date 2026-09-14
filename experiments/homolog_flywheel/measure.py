@@ -36,6 +36,7 @@ CSV_COLUMNS = [
     "unit_norm_error",
     "step_geodesic_rad",
     "axis_drift_rad",
+    "walk_phase_rad",
     "identity_preservation",
 ]
 
@@ -89,6 +90,12 @@ def measure(
         "unit_norm_error": unit_norm_error,
         "step_geodesic_rad": step_geodesic_rad,
         "axis_drift_rad": drift,
+        # analog: Rodrigues walk increment. Equals θ for published n>=2; 0 if the axis is fixed.
+        "walk_phase_rad": (
+            float("nan")
+            if state.n == 1
+            else (float(state.insertion_angle_rad) if state.step_mode == "published" else 0.0)
+        ),
         # analog: z-map vocabulary, cheap overlap, not the 300-frame map
         "identity_preservation": identity_overlap,
         "Z": int(state.Z),

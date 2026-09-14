@@ -20,10 +20,22 @@ from typing import Any
 import numpy as np
 
 from homolog_flywheel.analog import FROZEN_Z, NOTES_PREFIX, STEP_MODES
-from homolog_flywheel.insert import insert
-from homolog_flywheel.measure import measure
-from homolog_flywheel.seed import identity_seed
+from homolog_flywheel.insert import (
+    BAKE_X,
+    axis_for_mode,
+    insert,
+    q_mult,
+    q_normalize,
+    rodrigues,
+    small_rotor,
+    unit_axis,
+)
+from homolog_flywheel.measure import axis_drift_rad, measure
+from homolog_flywheel.seed import IDENTITY_Q, identity_seed
 from homolog_flywheel.state import HomologState
+
+# analog: CLI axis with an x-component, so published walk leaves the yz-plane.
+OFF_YZ_AXIS = np.array([1.0, 0.0, 1.0], dtype=float)
 
 COMPARE_COLUMNS = [
     "n",
@@ -34,6 +46,7 @@ COMPARE_COLUMNS = [
     "axis_y",
     "axis_z",
     "axis_drift_rad",
+    "walk_phase_rad",
     "step_geodesic_rad",
     "identity_overlap",
     "Z",
@@ -45,6 +58,7 @@ SUMMARY_COLUMNS = [
     "n_max",
     "alias",
     "axis_drift_mean",
+    "walk_phase_mean",
     "step_geodesic_mean",
     "identity_overlap_at_nmax",
     "axis_x",
@@ -102,6 +116,7 @@ def summarize_mode(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "n_max": int(last["n"]),
         "alias": last["alias"],
         "axis_drift_mean": _finite_mean([float(r["axis_drift_rad"]) for r in rows]),
+        "walk_phase_mean": _finite_mean([float(r["walk_phase_rad"]) for r in rows]),
         "step_geodesic_mean": _finite_mean([float(r["step_geodesic_rad"]) for r in rows]),
         "identity_overlap_at_nmax": float(last["identity_overlap"]),
         "axis_x": float(last["axis_x"]),
@@ -165,3 +180,69 @@ def comparison_verdict(long_rows: list[dict[str, Any]], summaries: list[dict[str
         f"{NOTES_PREFIX} mode comparison: aliases match at each n; "
         "modes differ by axis rule (not by alkane labels); Z frozen, n is not Z."
     )
+
+
+def rotor_single_axis_overlap(n: int, angle_rad: float) -> float:
+    """|cos((n-1)θ/2)|. analog: fixed-axis subgroup, not an alkane invariant."""
+    return float(abs(math.cos((n - 1) * angle_rad / 2.0)))
+
+
+def expected_s2_drift(cli_axis: np.ndarray, angle_rad: float) -> float:
+    """S² chord of one Rodrigues step of CLI about bake-x. Equals θ iff CLI ⟂ x."""
+    v = unit_axis(cli_axis)
+    w = unit_axis(rodrigues(v, BAKE_X, float(angle_rad)))
+    return axis_drift_rad(v, w)
+
+
+def compose_published_qs(
+    n_max: int,
+    angle_rad: float,
+    cli_axis: np.ndarray,
+    *,
+    side: str = "left",
+) -> list[np.ndarray]:
+    """Independent product of walking-axis rotors. Does not use aliases or Z."""
+    q = IDENTITY_Q.copy()
+    out = [q.copy()]
+    cli = unit_axis(cli_axis)
+    for step_index in range(1, n_max):
+        ax = axis_for_mode(
+            "published",
+            step_index=step_index,
+            cli_axis=cli,
+            angle_rad=angle_rad,
+        )
+        rotor = small_rotor(angle_rad, ax)
+        q = q_normalize(q_mult(rotor, q) if side == "left" else q_mult(q, rotor))
+        out.append(np.asarray(q, dtype=float).copy())
+    return out
+
+
+def published_axis_probe(
+    n_max: int,
+    angle_rad: float,
+    axis_a: np.ndarray,
+    axis_b: np.ndarray,
+    *,
+    seed: int = 0,
+    Z: int = FROZEN_Z,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Two published chains at the same n-max; only CLI axis differs."""
+    rows: list[dict[str, Any]] = []
+    summaries: list[dict[str, Any]] = []
+    for axis in (axis_a, axis_b):
+        states = run_chain(
+            n_max,
+            "published",
+            angle_rad,
+            unit_axis(axis),
+            seed=seed,
+            Z=Z,
+        )
+        chain_rows = [s.invariants for s in states]
+        for row in chain_rows:
+            row["cli_axis"] = ",".join(f"{x:.6f}" for x in unit_axis(axis))
+        rows.extend(chain_rows)
+        summaries.append(summarize_mode(chain_rows))
+        summaries[-1]["cli_axis"] = ",".join(f"{x:.6f}" for x in unit_axis(axis))
+    return rows, summaries

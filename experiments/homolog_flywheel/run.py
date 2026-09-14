@@ -34,6 +34,7 @@ from homolog_flywheel.compare import (
     SUMMARY_COLUMNS,
     comparison_verdict,
     mode_comparison,
+    published_axis_probe,
     run_chain,
 )
 from homolog_flywheel.insert import DEFAULT_ANGLE_RAD, DEFAULT_AXIS
@@ -106,6 +107,7 @@ def _print_table(rows: list[dict[str, Any]], cols: list[str] | None = None) -> N
             "step_mode",
             "identity_overlap",
             "axis_drift_rad",
+            "walk_phase_rad",
             "step_geodesic_rad",
         ]
     widths = {c: max(len(c), 8) for c in cols}
@@ -171,6 +173,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="at fixed n-max, compare rotor vs flywheel vs published by axis rule",
     )
+    parser.add_argument(
+        "--probe-axis",
+        nargs=3,
+        type=float,
+        default=None,
+        metavar=("X", "Y", "Z"),
+        help="second CLI axis for a published walking-plane probe (use an x-component)",
+    )
     return parser.parse_args(argv)
 
 
@@ -186,6 +196,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.compare_modes:
         return _run_compare(args, axis, out_dir, json_path)
+    if args.probe_axis is not None:
+        return _run_probe(args, axis, np.asarray(args.probe_axis, dtype=float), out_dir, json_path)
 
     states = run_chain(
         n_max=args.n_max,
@@ -317,6 +329,7 @@ def _run_compare(
             "alias",
             "axis_rule",
             "axis_drift_mean",
+            "walk_phase_mean",
             "step_geodesic_mean",
             "identity_overlap_at_nmax",
         ],
@@ -326,6 +339,78 @@ def _run_compare(
     print()
     print(f"{NOTES_PREFIX} wrote {compare_csv}")
     print(f"{NOTES_PREFIX} wrote {summary_csv}")
+    print(f"{NOTES_PREFIX} wrote {json_path}")
+    print(verdict)
+    return 0
+
+
+def _run_probe(
+    args: argparse.Namespace,
+    axis_a: np.ndarray,
+    axis_b: np.ndarray,
+    out_dir: Path,
+    json_path: Path,
+) -> int:
+    rows, summaries = published_axis_probe(
+        n_max=args.n_max,
+        angle_rad=float(args.angle_rad),
+        axis_a=axis_a,
+        axis_b=axis_b,
+        seed=int(args.seed),
+    )
+    unit_ok = all(float(r["unit_norm_error"]) < 1e-6 for r in rows)
+    if not unit_ok:
+        print(f"{NOTES_PREFIX} probe failed unit-norm check", file=sys.stderr)
+        return 2
+    probe_csv = out_dir / "homolog_axis_probe.csv"
+    _write_csv(probe_csv, rows, COMPARE_COLUMNS)
+    overlaps = [float(s["identity_overlap_at_nmax"]) for s in summaries]
+    verdict = (
+        f"{NOTES_PREFIX} published walking-plane probe: aliases unchanged; Z frozen; "
+        "walk_phase stays the insertion angle; n=4 overlap changes with CLI axis. "
+        "n=4 numbers are not a locked invariant."
+        if abs(overlaps[0] - overlaps[1]) > 1e-6
+        else "hypothesis: not supported by this run"
+    )
+    payload = {
+        "disclaimer": DISCLAIMER,
+        "hypothesis": (
+            "hypothesis: under --step published, a CLI axis with an x-component leaves yz; "
+            "walk_phase stays θ; identity_overlap at n-max changes. Not an alkane result."
+        ),
+        "hypothesis_verdict": verdict,
+        "config": {
+            "n_max": args.n_max,
+            "step": "published",
+            "probe_axis": True,
+            "axis": [float(x) for x in axis_a],
+            "probe_axis_vec": [float(x) for x in axis_b],
+            "angle_rad": float(args.angle_rad),
+            "seed": int(args.seed),
+            "out": str(out_dir),
+        },
+        "git_sha": _git_sha(),
+        "flux_hopf_lib_version": _lib_version(),
+        "summary": summaries,
+        "rows": rows,
+    }
+    _write_json(json_path, payload)
+    print(DISCLAIMER)
+    print()
+    print(f"{NOTES_PREFIX} published walking-plane probe; Z frozen; n is not Z")
+    print()
+    _print_table(
+        summaries,
+        cols=[
+            "cli_axis",
+            "alias",
+            "axis_drift_mean",
+            "walk_phase_mean",
+            "identity_overlap_at_nmax",
+        ],
+    )
+    print()
+    print(f"{NOTES_PREFIX} wrote {probe_csv}")
     print(f"{NOTES_PREFIX} wrote {json_path}")
     print(verdict)
     return 0

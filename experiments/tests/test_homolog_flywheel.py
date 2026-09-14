@@ -15,14 +15,23 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 _EXP = Path(__file__).resolve().parents[1]
 if str(_EXP) not in sys.path:
     sys.path.insert(0, str(_EXP))
 
 from homolog_flywheel.analog import FROZEN_Z, STEP_MODES, alias_for
-from homolog_flywheel.compare import mode_comparison, run_chain
-from homolog_flywheel.insert import DEFAULT_AXIS, axis_for_mode, insert
+from homolog_flywheel.compare import (
+    OFF_YZ_AXIS,
+    compose_published_qs,
+    expected_s2_drift,
+    mode_comparison,
+    published_axis_probe,
+    rotor_single_axis_overlap,
+    run_chain,
+)
+from homolog_flywheel.insert import DEFAULT_ANGLE_RAD, DEFAULT_AXIS, axis_for_mode, insert
 from homolog_flywheel.measure import measure
 from homolog_flywheel.seed import IDENTITY_Q, identity_seed
 
@@ -132,3 +141,52 @@ def test_compare_modes_does_not_promote_n_to_Z():
         ns = [int(s.n) for s in chains[mode]]
         assert zs == {FROZEN_Z}
         assert ns == [1, 2, 3, 4]
+
+
+def test_rotor_overlap_is_single_axis_cosine():
+    theta = DEFAULT_ANGLE_RAD
+    states = run_chain(4, "rotor", theta, DEFAULT_AXIS)
+    for state in states:
+        expected = rotor_single_axis_overlap(state.n, theta)
+        assert state.invariants["identity_overlap"] == pytest.approx(expected, abs=1e-6)
+
+
+def test_published_overlaps_match_independent_composition():
+    theta = DEFAULT_ANGLE_RAD
+    states = run_chain(4, "published", theta, DEFAULT_AXIS)
+    left = compose_published_qs(4, theta, DEFAULT_AXIS, side="left")
+    right = compose_published_qs(4, theta, DEFAULT_AXIS, side="right")
+    for state, q_l, q_r in zip(states, left, right, strict=True):
+        got = float(state.invariants["identity_overlap"])
+        assert got == pytest.approx(abs(float(q_l[0])), abs=1e-6)
+        assert got == pytest.approx(abs(float(q_r[0])), abs=1e-6)
+        assert abs(float(q_l[0])) == pytest.approx(abs(float(q_r[0])), abs=1e-6)
+
+
+def test_default_published_axis_stays_in_yz():
+    states = run_chain(4, "published", DEFAULT_ANGLE_RAD, DEFAULT_AXIS)
+    for state in states:
+        assert abs(float(state.invariants["axis_x"])) < 1e-6
+    drifts = [float(s.invariants["axis_drift_rad"]) for s in states if s.n >= 2]
+    assert drifts
+    assert all(abs(d - DEFAULT_ANGLE_RAD) < 1e-6 for d in drifts)
+
+
+def test_published_off_yz_walk_phase_stays_theta_overlap_changes():
+    theta = DEFAULT_ANGLE_RAD
+    rows, summaries = published_axis_probe(4, theta, DEFAULT_AXIS, OFF_YZ_AXIS)
+    assert all(int(r["Z"]) == FROZEN_Z for r in rows)
+    n4 = [r for r in rows if int(r["n"]) == 4]
+    assert {r["alias"] for r in n4} == {"butan"}
+    assert len(summaries) == 2
+    ov_z, ov_off = (float(s["identity_overlap_at_nmax"]) for s in summaries)
+    assert abs(ov_z - ov_off) > 1e-3
+    for row in rows:
+        if int(row["n"]) >= 2:
+            assert float(row["walk_phase_rad"]) == pytest.approx(theta, abs=1e-6)
+            assert float(row["step_geodesic_rad"]) == pytest.approx(theta, abs=1e-6)
+    off_rows = [r for r in rows if int(r["n"]) >= 2 and abs(float(r["axis_x"])) > 1e-6]
+    assert off_rows
+    expected_off = expected_s2_drift(OFF_YZ_AXIS, theta)
+    for row in off_rows:
+        assert float(row["axis_drift_rad"]) == pytest.approx(expected_off, abs=1e-6)

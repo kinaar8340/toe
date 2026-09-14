@@ -76,6 +76,16 @@ Axis rules (the thing that is supposed to differ across modes):
 
 Display aliases (`methan` …) are the same function of \(n\) in every mode. Do not read them as a chemistry check.
 
+Rotor overlap is the single-axis formula \(\lvert\cos((n-1)\theta/2)\rvert\). Published overlap is \(\lvert\mathrm{Re}(q)\rvert\) of composing the same \(\theta\)-rotors whose axes walk by a golden-angle rotation about bake-\(x\). Those numbers match an independent left- or right-multiply (default \(z\)). They are not a butane signature. Default \(z\) rotated about bake-\(x\) stays in the \(yz\)-plane; published grows an \(x\)-component only if `--axis` has one.
+
+Walking-plane probe (published only; still not \(Z\)):
+
+```bash
+PYTHONPATH=src:experiments python -m homolog_flywheel.run --n-max 4 --probe-axis 1 0 1
+```
+
+`walk_phase_rad` stays \(\theta\). S² `axis_drift_rad` equals \(\theta\) on default \(z\) (CLI \(\perp\) bake-\(x\)); off-\(yz\) it is the constant chord \(\arccos(v\cdot R_x(\theta)v)\). Identity overlap at \(n=4\) changes. Aliases stay `butan`.
+
 ## What this does not do
 
 - No periodic-table proof, no “element” identity, no noble-gas claims.
@@ -96,7 +106,7 @@ Display aliases (`methan` …) are the same function of \(n\) in every mode. Do 
 - Default axis: `0 0 1`
 - Writes `experiments/outputs/homolog_table.csv` and `experiments/outputs/homolog_run.json`
 - Optional plot `experiments/outputs/homolog_overlap_vs_n.png` if matplotlib imports
-- CSV columns: `n, alias, step_mode, axis_rule, q_w, q_x, q_y, q_z, axis_x, axis_y, axis_z, identity_overlap, unit_norm_error, step_geodesic_rad, axis_drift_rad, identity_preservation`
+- CSV columns: `n, alias, step_mode, axis_rule, q_w, q_x, q_y, q_z, axis_x, axis_y, axis_z, identity_overlap, unit_norm_error, step_geodesic_rad, axis_drift_rad, walk_phase_rad, identity_preservation`
 - `identity_preservation` is the cheap overlap analog of the z-map vocabulary, **not** the 300-frame map
 - Exit 0 if every state is a unit quaternion and \(n\) ran `1..n-max`. Exit 2 if the identity seed is not \(q=(1,0,0,0)\) within `1e-6`.
 
