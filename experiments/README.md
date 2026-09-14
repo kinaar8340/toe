@@ -43,6 +43,14 @@ PYTHONPATH=src:experiments python -m homolog_flywheel.run --n-max 4 --step flywh
 PYTHONPATH=src:experiments python -m homolog_flywheel.run --n-max 4 --step published
 ```
 
+Mode comparison at a **fixed** `--n-max` (axis rule, not alkane labels):
+
+```bash
+PYTHONPATH=src:experiments python -m homolog_flywheel.run --n-max 4 --compare-modes
+```
+
+Writes `homolog_mode_compare.csv` and `homolog_mode_summary.csv`. Aliases match at each \(n\); modes differ by how the insertion axis is chosen. `Z` stays frozen.
+
 `--slow` enables optional PDE / conduit invariants. Tests:
 
 ```bash
@@ -57,6 +65,16 @@ python -m pytest tests/test_homolog_flywheel_experiment.py -q
 2. Because `map_z_to_flywheel` does not mutate a quaternion, the discrete \(q\) update reuses `flux_hopf_lib.conduit.apply_golden_angle_increment` / `GOLDEN_ANGLE_RAD` (the same golden-angle increment already used by conduit bake / `GoldenAngleMixin`), applied as `small_rotor`.
 
 `--step rotor` is the same `small_rotor` increment without the z-map wrap. `--step flywheel` appends one `FluxFlywheel` instead of rotating the slot quaternion.
+
+Axis rules (the thing that is supposed to differ across modes):
+
+| `--step` | analog axis rule | published source |
+|---|---|---|
+| `rotor` | CLI `--axis`, fixed (default \(z\)) | CLI |
+| `flywheel` | bake \(x=(1,0,0)\) | `RubikConeConduit.epoch_synchronous_bake` rotor axis |
+| `published` | golden-angle rotate CLI axis about bake-\(x\) | `apply_golden_angle_increment` + bake \(x\) |
+
+Display aliases (`methan` …) are the same function of \(n\) in every mode. Do not read them as a chemistry check.
 
 ## What this does not do
 
@@ -78,7 +96,7 @@ python -m pytest tests/test_homolog_flywheel_experiment.py -q
 - Default axis: `0 0 1`
 - Writes `experiments/outputs/homolog_table.csv` and `experiments/outputs/homolog_run.json`
 - Optional plot `experiments/outputs/homolog_overlap_vs_n.png` if matplotlib imports
-- CSV columns: `n, alias, step_mode, q_w, q_x, q_y, q_z, identity_overlap, unit_norm_error, step_geodesic_rad, identity_preservation`
+- CSV columns: `n, alias, step_mode, axis_rule, q_w, q_x, q_y, q_z, axis_x, axis_y, axis_z, identity_overlap, unit_norm_error, step_geodesic_rad, axis_drift_rad, identity_preservation`
 - `identity_preservation` is the cheap overlap analog of the z-map vocabulary, **not** the 300-frame map
 - Exit 0 if every state is a unit quaternion and \(n\) ran `1..n-max`. Exit 2 if the identity seed is not \(q=(1,0,0,0)\) within `1e-6`.
 

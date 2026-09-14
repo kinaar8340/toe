@@ -25,7 +25,14 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from homolog_flywheel.analog import N_MAX, NOTES_PREFIX, STEP_MODES, alias_for
+from homolog_flywheel.analog import (
+    AXIS_RULE,
+    BAKE_X_AXIS,
+    N_MAX,
+    NOTES_PREFIX,
+    STEP_MODES,
+    alias_for,
+)
 from homolog_flywheel.state import HomologState
 
 Array = NDArray[np.floating]
@@ -40,9 +47,18 @@ def _phi() -> float:
     return (1.0 + math.sqrt(5.0)) / 2.0
 
 
+_rodrigues_rotation = None
 try:
     from flux_hopf_lib.constants import GOLDEN_ANGLE_RAD as _GOLDEN_ANGLE_RAD
-    from flux_hopf_lib.quaternion import q_conj, q_mult, q_normalize, small_rotor
+    from flux_hopf_lib.quaternion import (
+        q_conj,
+        q_mult,
+        q_normalize,
+        small_rotor,
+    )
+    from flux_hopf_lib.quaternion import (
+        rodrigues_rotation as _rodrigues_rotation,
+    )
 
     DEFAULT_ANGLE_RAD = float(_GOLDEN_ANGLE_RAD)
 except ImportError:  # pragma: no cover - pin 0.2.2 provides these
@@ -73,6 +89,8 @@ except ImportError:  # pragma: no cover - pin 0.2.2 provides these
             if axis is None:
                 axis = np.array([0.0, 0.0, 1.0])
             return _as_np(_c_small_rotor(angle_rad, axis))
+
+        _rodrigues_rotation = None
     except ImportError as exc:  # pragma: no cover
         raise ImportError(
             "analog: need flux_hopf_lib.quaternion or conduit quaternion helpers"
@@ -100,6 +118,7 @@ except ImportError:  # pragma: no cover - shim if pin lacks the class
 
 
 DEFAULT_AXIS = np.array([0.0, 0.0, 1.0], dtype=float)
+BAKE_X = np.array(BAKE_X_AXIS, dtype=float)
 
 
 def unit_axis(axis: Array | None) -> np.ndarray:
@@ -108,6 +127,42 @@ def unit_axis(axis: Array | None) -> np.ndarray:
     if n < 1e-12:
         return DEFAULT_AXIS.copy()
     return ax / n
+
+
+def rodrigues(v: Array, k: Array, theta: float) -> np.ndarray:
+    """Rotate v about k by theta. Prefer flux_hopf_lib; local formula only as fallback."""
+    if _rodrigues_rotation is not None:
+        return np.asarray(_rodrigues_rotation(v, k, theta), dtype=float)
+    k_u = unit_axis(k)
+    vec = np.asarray(v, dtype=float).reshape(3)
+    c, s = math.cos(theta), math.sin(theta)
+    return vec * c + np.cross(k_u, vec) * s + k_u * np.dot(k_u, vec) * (1.0 - c)
+
+
+def axis_for_mode(
+    mode: str,
+    *,
+    step_index: int,
+    cli_axis: Array | None = None,
+    angle_rad: float | None = None,
+) -> np.ndarray:
+    """Choose the insertion axis for this mode. analog: axis rule, not alkane identity.
+
+    rotor     — CLI axis, fixed (default z).
+    flywheel  — conduit epoch-bake rotor axis (1,0,0).
+    published — golden-angle rotate CLI axis about bake-x. Does not use n as Z.
+    """
+    if mode not in STEP_MODES:
+        raise ValueError(f"analog: unknown --step {mode!r}; expected one of {STEP_MODES}")
+    cli = unit_axis(cli_axis)
+    if mode == "rotor":
+        return cli
+    if mode == "flywheel":
+        return BAKE_X.copy()
+    phase = published_phase_rad(
+        step_index, DEFAULT_ANGLE_RAD if angle_rad is None else float(angle_rad)
+    )
+    return unit_axis(rodrigues(cli, BAKE_X, phase))
 
 
 def make_flywheel(quaternion: Array | None = None) -> Any:
@@ -167,18 +222,21 @@ def insert(
         raise ValueError(f"analog: n={n_next} exceeds N_MAX={N_MAX}")
 
     angle = float(state.insertion_angle_rad if angle_rad is None else angle_rad)
-    ax = unit_axis(state.insertion_axis if axis is None else axis)
+    cli = unit_axis(axis if axis is not None else state.cli_axis)
+    step_index = int(state.n)  # local step index; never used as Z
+    ax = axis_for_mode(mode, step_index=step_index, cli_axis=cli, angle_rad=angle)
     frozen_z = int(state.Z)
     q = np.array(state.q, dtype=float, copy=True)
     flywheels = list(state.flywheels)
-    extra = f"quat={QUAT_SOURCE}; angle={ANGLE_SOURCE}"
+    rule = AXIS_RULE[mode]
+    extra = f"quat={QUAT_SOURCE}; angle={ANGLE_SOURCE}; axis_rule={rule}"
 
     if mode == "rotor":
         rotor = small_rotor(angle, ax)
         q = q_normalize(q_mult(rotor, q))
         notes = (
             f"{NOTES_PREFIX} rotor insertion n={state.n}->{n_next}; "
-            f"len(flywheels) stays {len(flywheels)}. {extra}"
+            f"len(flywheels) stays {len(flywheels)}; axis=cli_fixed. {extra}"
         )
     elif mode == "flywheel":
         rotor = small_rotor(angle, ax)
@@ -186,11 +244,10 @@ def insert(
         notes = (
             f"{NOTES_PREFIX} flywheel append n={state.n}->{n_next}; "
             f"slot q stays at identity; len(flywheels)={len(flywheels)}; "
-            f"wheel={FLYWHEEL_SOURCE}. {extra}"
+            f"axis=bake_x; wheel={FLYWHEEL_SOURCE}. {extra}"
         )
     else:
         # published: wrap map_z_to_flywheel at frozen Z; increment local step_index.
-        step_index = int(state.n)
         z_note = f"map_z_to_flywheel unavailable; Z stays {frozen_z}"
         if _map_z_to_flywheel is not None:
             stats = _map_z_to_flywheel(frozen_z)
@@ -205,7 +262,7 @@ def insert(
         notes = (
             f"{NOTES_PREFIX} published insertion n={state.n}->{n_next}; {z_note}; "
             f"apply_golden_angle_increment step_index={step_index} "
-            f"golden_phase={phase:.6f}. {extra}"
+            f"golden_phase={phase:.6f}; axis=golden_rotate_cli. {extra}"
         )
 
     return HomologState(
@@ -219,4 +276,5 @@ def insert(
         invariants={},
         notes=notes,
         Z=frozen_z,
+        cli_axis=cli,
     )

@@ -43,6 +43,17 @@ N_MAX = 10
 FROZEN_Z = 2
 NOTES_PREFIX = "MODEL analog:"
 
+# analog: how each mode chooses an insertion axis. Not a chemical identity.
+# rotor     — CLI / default z, fixed
+# flywheel  — conduit epoch_synchronous_bake rotor axis (1,0,0)
+# published — golden-angle rotate the CLI axis about bake-x
+AXIS_RULE = {
+    "rotor": "cli_fixed",
+    "flywheel": "bake_x",
+    "published": "golden_rotate_cli",
+}
+BAKE_X_AXIS = (1.0, 0.0, 0.0)
+
 
 def alias_for(n: int) -> str:
     """Return the display alias for chain index n."""

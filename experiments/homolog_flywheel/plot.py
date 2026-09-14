@@ -38,3 +38,33 @@ def plot_overlap_vs_n(rows: list[dict[str, Any]], out_path: Path) -> Path | None
     fig.savefig(out_path)
     plt.close(fig)
     return out_path
+
+
+def plot_mode_compare(rows: list[dict[str, Any]], out_path: Path) -> Path | None:
+    """analog: identity_overlap vs n for rotor / flywheel / published."""
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return None
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    for mode in ("rotor", "flywheel", "published"):
+        subset = [r for r in rows if r.get("step_mode") == mode]
+        if not subset:
+            continue
+        ns = [int(r["n"]) for r in subset]
+        ys = [float(r["identity_overlap"]) for r in subset]
+        ax.plot(ns, ys, marker="o", label=f"analog: {mode}")
+    ax.set_xlabel("n (chain index)")
+    ax.set_ylabel("identity_overlap")
+    ax.set_title("analog: identity_overlap vs n by axis rule (MODEL, not theorem)")
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path)
+    plt.close(fig)
+    return out_path

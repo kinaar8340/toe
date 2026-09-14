@@ -45,6 +45,10 @@ select = [
 ]
 ignore = ["E501", "E402", "B008"]
 
+[tool.ruff.lint.per-file-ignores]
+# Optional --slow / matplotlib / version imports stay in-function.
+"experiments/**/*.py" = ["PLC0415"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

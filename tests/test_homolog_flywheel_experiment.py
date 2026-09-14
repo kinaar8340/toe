@@ -34,3 +34,6 @@ test_one_step_not_three = _mod.test_one_step_not_three
 test_z_is_not_n = _mod.test_z_is_not_n
 test_readme_disclaimer_present = _mod.test_readme_disclaimer_present
 test_geodesic_defined_for_n_ge_2 = _mod.test_geodesic_defined_for_n_ge_2
+test_aliases_identical_across_modes = _mod.test_aliases_identical_across_modes
+test_axis_rules_differ_across_modes = _mod.test_axis_rules_differ_across_modes
+test_compare_modes_does_not_promote_n_to_Z = _mod.test_compare_modes_does_not_promote_n_to_Z

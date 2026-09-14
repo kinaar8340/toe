@@ -20,7 +20,9 @@ _EXP = Path(__file__).resolve().parents[1]
 if str(_EXP) not in sys.path:
     sys.path.insert(0, str(_EXP))
 
-from homolog_flywheel.insert import insert
+from homolog_flywheel.analog import FROZEN_Z, STEP_MODES, alias_for
+from homolog_flywheel.compare import mode_comparison, run_chain
+from homolog_flywheel.insert import DEFAULT_AXIS, axis_for_mode, insert
 from homolog_flywheel.measure import measure
 from homolog_flywheel.seed import IDENTITY_Q, identity_seed
 
@@ -87,3 +89,46 @@ def test_geodesic_defined_for_n_ge_2():
     assert math.isnan(float(row1["step_geodesic_rad"]))
     assert not math.isnan(float(row2["step_geodesic_rad"]))
     assert float(row2["step_geodesic_rad"]) > 0.0
+    assert math.isnan(float(row1["axis_drift_rad"]))
+    assert not math.isnan(float(row2["axis_drift_rad"]))
+
+
+def test_aliases_identical_across_modes():
+    n_max = 4
+    aliases = {}
+    for mode in STEP_MODES:
+        states = run_chain(n_max, mode, angle_rad=0.5, axis=DEFAULT_AXIS)
+        aliases[mode] = [s.alias for s in states]
+        assert aliases[mode] == [alias_for(n) for n in range(1, n_max + 1)]
+    assert aliases["rotor"] == aliases["flywheel"] == aliases["published"]
+
+
+def test_axis_rules_differ_across_modes():
+    cli = DEFAULT_AXIS
+    rotor = axis_for_mode("rotor", step_index=1, cli_axis=cli)
+    fly = axis_for_mode("flywheel", step_index=1, cli_axis=cli)
+    pub = axis_for_mode("published", step_index=1, cli_axis=cli)
+    assert np.allclose(rotor, cli, atol=1e-6)
+    assert np.allclose(fly, np.array([1.0, 0.0, 0.0]), atol=1e-6)
+    assert not np.allclose(pub, rotor, atol=1e-3)
+    assert not np.allclose(pub, fly, atol=1e-3)
+    assert np.allclose(axis_for_mode("rotor", step_index=3, cli_axis=cli), rotor)
+
+
+def test_compare_modes_does_not_promote_n_to_Z():
+    long_rows, summaries, chains = mode_comparison(
+        n_max=4,
+        angle_rad=0.5,
+        axis=DEFAULT_AXIS,
+    )
+    assert set(chains) == set(STEP_MODES)
+    assert all(int(r["Z"]) == FROZEN_Z for r in long_rows)
+    assert all(int(s["Z"]) == FROZEN_Z for s in summaries)
+    n_vals = {int(r["n"]) for r in long_rows}
+    assert n_vals == {1, 2, 3, 4}
+    assert FROZEN_Z in n_vals  # n=2 exists; Z is still 2, not assigned from n
+    for mode in STEP_MODES:
+        zs = {int(s.Z) for s in chains[mode]}
+        ns = [int(s.n) for s in chains[mode]]
+        assert zs == {FROZEN_Z}
+        assert ns == [1, 2, 3, 4]

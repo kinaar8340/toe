@@ -13,8 +13,14 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from homolog_flywheel.analog import DEFAULT_STEP_MODE, FROZEN_Z, NOTES_PREFIX, alias_for
-from homolog_flywheel.insert import DEFAULT_ANGLE_RAD, make_flywheel, unit_axis
+from homolog_flywheel.analog import (
+    AXIS_RULE,
+    DEFAULT_STEP_MODE,
+    FROZEN_Z,
+    NOTES_PREFIX,
+    alias_for,
+)
+from homolog_flywheel.insert import DEFAULT_ANGLE_RAD, axis_for_mode, make_flywheel, unit_axis
 from homolog_flywheel.state import HomologState
 
 Array = NDArray[np.floating]
@@ -30,9 +36,11 @@ def identity_seed(
     Z: int = FROZEN_Z,
 ) -> HomologState:
     """n=1: one flywheel at quaternion identity. analog: methane slot."""
-    ax = unit_axis(insertion_axis)
+    cli = unit_axis(insertion_axis)
     angle = DEFAULT_ANGLE_RAD if insertion_angle_rad is None else float(insertion_angle_rad)
+    ax = axis_for_mode(step_mode, step_index=0, cli_axis=cli, angle_rad=angle)
     q = IDENTITY_Q.copy()
+    rule = AXIS_RULE.get(step_mode, "cli_fixed")
     return HomologState(
         n=1,
         alias=alias_for(1),
@@ -44,7 +52,8 @@ def identity_seed(
         invariants={},
         notes=(
             f"{NOTES_PREFIX} n=1 identity flywheel seed; alias=methan (display label); "
-            f"frozen Z={int(Z)} is not n."
+            f"frozen Z={int(Z)} is not n; axis_rule={rule}."
         ),
         Z=int(Z),
+        cli_axis=cli,
     )

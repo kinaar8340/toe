@@ -33,10 +33,15 @@ class HomologState:
     invariants: dict[str, Any] = field(default_factory=dict)
     notes: str = NOTES_PREFIX
     Z: int = FROZEN_Z  # frozen element-analog index; insert must not change this
+    cli_axis: NDArray[np.floating] | None = None  # user/CLI reference; mode rule maps this
 
     def __post_init__(self) -> None:
         self.q = np.asarray(self.q, dtype=float).reshape(4)
         self.insertion_axis = np.asarray(self.insertion_axis, dtype=float).reshape(3)
+        if self.cli_axis is None:
+            self.cli_axis = np.array(self.insertion_axis, dtype=float, copy=True)
+        else:
+            self.cli_axis = np.asarray(self.cli_axis, dtype=float).reshape(3)
         if not self.notes.startswith(NOTES_PREFIX):
             self.notes = f"{NOTES_PREFIX} {self.notes}"
         if self.alias == "":

@@ -15,7 +15,8 @@ from typing import Any
 
 import numpy as np
 
-from homolog_flywheel.insert import q_conj, q_mult, q_normalize
+from homolog_flywheel.analog import AXIS_RULE
+from homolog_flywheel.insert import q_conj, q_mult, q_normalize, unit_axis
 from homolog_flywheel.seed import IDENTITY_Q
 from homolog_flywheel.state import HomologState
 
@@ -23,13 +24,18 @@ CSV_COLUMNS = [
     "n",
     "alias",
     "step_mode",
+    "axis_rule",
     "q_w",
     "q_x",
     "q_y",
     "q_z",
+    "axis_x",
+    "axis_y",
+    "axis_z",
     "identity_overlap",
     "unit_norm_error",
     "step_geodesic_rad",
+    "axis_drift_rad",
     "identity_preservation",
 ]
 
@@ -39,6 +45,13 @@ def quaternion_geodesic_rad(q_prev: np.ndarray, q_now: np.ndarray) -> float:
     q_rel = q_mult(q_normalize(q_now), q_conj(q_normalize(q_prev)))
     w = float(np.clip(abs(float(q_rel[0])), 0.0, 1.0))
     return float(2.0 * np.arccos(w))
+
+
+def axis_drift_rad(axis_prev: np.ndarray, axis_now: np.ndarray) -> float:
+    """S² geodesic between successive insertion axes. analog: axis rule, not n as Z."""
+    a = unit_axis(axis_prev)
+    b = unit_axis(axis_now)
+    return float(np.arccos(np.clip(float(np.dot(a, b)), -1.0, 1.0)))
 
 
 def measure(
@@ -54,20 +67,28 @@ def measure(
     unit_norm_error = float(abs(np.linalg.norm(q) - 1.0))
     if prev is None or state.n == 1:
         step_geodesic_rad = float("nan")
+        drift = float("nan")
     else:
         step_geodesic_rad = quaternion_geodesic_rad(prev.q, q)
+        drift = axis_drift_rad(prev.insertion_axis, state.insertion_axis)
 
+    axis = unit_axis(state.insertion_axis)
     row: dict[str, Any] = {
         "n": int(state.n),
         "alias": state.alias,
         "step_mode": state.step_mode,
+        "axis_rule": AXIS_RULE.get(state.step_mode, ""),
         "q_w": float(q[0]),
         "q_x": float(q[1]),
         "q_y": float(q[2]),
         "q_z": float(q[3]),
+        "axis_x": float(axis[0]),
+        "axis_y": float(axis[1]),
+        "axis_z": float(axis[2]),
         "identity_overlap": identity_overlap,
         "unit_norm_error": unit_norm_error,
         "step_geodesic_rad": step_geodesic_rad,
+        "axis_drift_rad": drift,
         # analog: z-map vocabulary, cheap overlap, not the 300-frame map
         "identity_preservation": identity_overlap,
         "Z": int(state.Z),

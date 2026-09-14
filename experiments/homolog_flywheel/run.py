@@ -29,11 +29,17 @@ from homolog_flywheel.analog import (
     NOTES_PREFIX,
     STEP_MODES,
 )
-from homolog_flywheel.insert import DEFAULT_ANGLE_RAD, DEFAULT_AXIS, insert
-from homolog_flywheel.measure import CSV_COLUMNS, hypothesis_verdict, measure
-from homolog_flywheel.plot import plot_overlap_vs_n
-from homolog_flywheel.seed import IDENTITY_Q, identity_seed
-from homolog_flywheel.state import HomologState
+from homolog_flywheel.compare import (
+    COMPARE_COLUMNS,
+    SUMMARY_COLUMNS,
+    comparison_verdict,
+    mode_comparison,
+    run_chain,
+)
+from homolog_flywheel.insert import DEFAULT_ANGLE_RAD, DEFAULT_AXIS
+from homolog_flywheel.measure import CSV_COLUMNS, hypothesis_verdict
+from homolog_flywheel.plot import plot_mode_compare, plot_overlap_vs_n
+from homolog_flywheel.seed import IDENTITY_Q
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT = REPO_ROOT / "experiments" / "outputs"
@@ -67,43 +73,10 @@ def _lib_version() -> str | None:
         return None
 
 
-def build_chain(
-    n_max: int,
-    step_mode: str,
-    angle_rad: float,
-    axis: np.ndarray,
-    *,
-    slow: bool = False,
-    seed: int = 0,
-    Z: int = 2,
-) -> list[HomologState]:
-    states = [
-        identity_seed(
-            step_mode=step_mode,
-            insertion_axis=axis,
-            insertion_angle_rad=angle_rad,
-            Z=Z,
-        )
-    ]
-    for _ in range(1, n_max):
-        states.append(
-            insert(
-                states[-1],
-                step_mode=step_mode,
-                angle_rad=angle_rad,
-                axis=axis,
-            )
-        )
-    for i, state in enumerate(states):
-        prev = states[i - 1] if i else None
-        state.invariants = measure(state, prev, slow=slow, seed=seed)
-    return states
-
-
-def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+def _write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=CSV_COLUMNS, extrasaction="ignore")
+        writer = csv.DictWriter(fh, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -125,8 +98,16 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(_sanitize(payload), indent=2, sort_keys=True) + "\n")
 
 
-def _print_table(rows: list[dict[str, Any]]) -> None:
-    cols = ["n", "alias", "step_mode", "identity_overlap", "unit_norm_error", "step_geodesic_rad"]
+def _print_table(rows: list[dict[str, Any]], cols: list[str] | None = None) -> None:
+    if cols is None:
+        cols = [
+            "n",
+            "alias",
+            "step_mode",
+            "identity_overlap",
+            "axis_drift_rad",
+            "step_geodesic_rad",
+        ]
     widths = {c: max(len(c), 8) for c in cols}
     for row in rows:
         for c in cols:
@@ -134,7 +115,8 @@ def _print_table(rows: list[dict[str, Any]]) -> None:
     header = "  ".join(c.ljust(widths[c]) for c in cols)
     print(header)
     print("  ".join("-" * widths[c] for c in cols))
-    for row in rows[:10]:
+    limit = min(len(rows), 30)
+    for row in rows[:limit]:
         print("  ".join(_fmt(row.get(c)).ljust(widths[c]) for c in cols))
 
 
@@ -184,6 +166,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--slow", action="store_true", help="enable PDE / conduit invariants")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--compare-modes",
+        action="store_true",
+        help="at fixed n-max, compare rotor vs flywheel vs published by axis rule",
+    )
     return parser.parse_args(argv)
 
 
@@ -194,7 +181,13 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     np.random.seed(args.seed)
     axis = np.asarray(args.axis, dtype=float)
-    states = build_chain(
+    out_dir = args.out if args.out.is_absolute() else REPO_ROOT / args.out
+    json_path = out_dir / "homolog_run.json"
+
+    if args.compare_modes:
+        return _run_compare(args, axis, out_dir, json_path)
+
+    states = run_chain(
         n_max=args.n_max,
         step_mode=args.step,
         angle_rad=float(args.angle_rad),
@@ -215,11 +208,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{NOTES_PREFIX} chain failed unit-norm or n-range check", file=sys.stderr)
         return 2
 
-    out_dir = args.out if args.out.is_absolute() else REPO_ROOT / args.out
     csv_path = out_dir / "homolog_table.csv"
-    json_path = out_dir / "homolog_run.json"
     png_path = out_dir / "homolog_overlap_vs_n.png"
-    _write_csv(csv_path, rows)
+    _write_csv(csv_path, rows, CSV_COLUMNS)
     verdict = hypothesis_verdict(rows)
     payload = {
         "disclaimer": DISCLAIMER,
@@ -228,6 +219,7 @@ def main(argv: list[str] | None = None) -> int:
         "config": {
             "n_max": args.n_max,
             "step": args.step,
+            "compare_modes": False,
             "angle_rad": float(args.angle_rad),
             "axis": [float(x) for x in axis],
             "slow": bool(args.slow),
@@ -248,6 +240,92 @@ def main(argv: list[str] | None = None) -> int:
     _print_table(rows)
     print()
     print(f"{NOTES_PREFIX} wrote {csv_path}")
+    print(f"{NOTES_PREFIX} wrote {json_path}")
+    print(verdict)
+    return 0
+
+
+def _run_compare(
+    args: argparse.Namespace,
+    axis: np.ndarray,
+    out_dir: Path,
+    json_path: Path,
+) -> int:
+    long_rows, summaries, chains = mode_comparison(
+        n_max=args.n_max,
+        angle_rad=float(args.angle_rad),
+        axis=axis,
+        slow=bool(args.slow),
+        seed=int(args.seed),
+    )
+    for mode, states in chains.items():
+        seed_q = np.asarray(states[0].q, dtype=float)
+        if not np.allclose(seed_q, IDENTITY_Q, atol=1e-6):
+            print(
+                f"{NOTES_PREFIX} identity seed is not q=(1,0,0,0) within 1e-6 ({mode})",
+                file=sys.stderr,
+            )
+            return 2
+        got_n = [int(s.n) for s in states]
+        unit_ok = all(float(s.invariants["unit_norm_error"]) < 1e-6 for s in states)
+        if got_n != list(range(1, args.n_max + 1)) or not unit_ok:
+            print(
+                f"{NOTES_PREFIX} chain failed unit-norm or n-range check ({mode})", file=sys.stderr
+            )
+            return 2
+
+    compare_csv = out_dir / "homolog_mode_compare.csv"
+    summary_csv = out_dir / "homolog_mode_summary.csv"
+    png_path = out_dir / "homolog_mode_compare.png"
+    _write_csv(compare_csv, long_rows, COMPARE_COLUMNS)
+    _write_csv(summary_csv, summaries, SUMMARY_COLUMNS)
+    verdict = comparison_verdict(long_rows, summaries)
+    payload = {
+        "disclaimer": DISCLAIMER,
+        "hypothesis": (
+            "hypothesis: at fixed n-max, rotor / flywheel / published differ by axis rule "
+            "(cli_fixed vs bake_x vs golden_rotate_cli), not by alkane aliases. "
+            "n is chain index; Z stays frozen."
+        ),
+        "hypothesis_verdict": verdict,
+        "config": {
+            "n_max": args.n_max,
+            "compare_modes": True,
+            "angle_rad": float(args.angle_rad),
+            "axis": [float(x) for x in axis],
+            "slow": bool(args.slow),
+            "seed": int(args.seed),
+            "out": str(out_dir),
+        },
+        "git_sha": _git_sha(),
+        "flux_hopf_lib_version": _lib_version(),
+        "summary": summaries,
+        "rows": long_rows,
+        "notes": [s.notes for states in chains.values() for s in states],
+    }
+    _write_json(json_path, payload)
+    plot_mode_compare(long_rows, png_path)
+
+    print(DISCLAIMER)
+    print()
+    print(f"{NOTES_PREFIX} mode comparison at n-max={args.n_max}; Z frozen; n is not Z")
+    print()
+    _print_table(
+        summaries,
+        cols=[
+            "step_mode",
+            "alias",
+            "axis_rule",
+            "axis_drift_mean",
+            "step_geodesic_mean",
+            "identity_overlap_at_nmax",
+        ],
+    )
+    print()
+    _print_table(long_rows)
+    print()
+    print(f"{NOTES_PREFIX} wrote {compare_csv}")
+    print(f"{NOTES_PREFIX} wrote {summary_csv}")
     print(f"{NOTES_PREFIX} wrote {json_path}")
     print(verdict)
     return 0
